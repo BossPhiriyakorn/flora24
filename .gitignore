@@ -1,5 +1,8 @@
 node_modules/
-.next/
+# เฉพาะ .next/standalone และ .next/static ขึ้น Git (ไม่รวม cache ที่เกิน 100MB)
+.next/*
+!.next/standalone/
+!.next/static/
 coverage/
 .DS_Store
 *.log
