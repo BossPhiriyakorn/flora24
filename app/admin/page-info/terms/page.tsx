@@ -1,0 +1,35 @@
+'use client';
+
+import { Save } from 'lucide-react';
+import { useToast } from '@/components/Toast';
+
+export default function PageInfoTermsPage() {
+  const { showToast } = useToast();
+  const handleSave = () => showToast('บันทึกเนื้อหาเงื่อนไขและข้อตกลงแล้ว');
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">จัดการหน้าเงื่อนไขและข้อตกลง</h1>
+          <p className="text-slate-500 text-sm">แก้ไขเนื้อหาข้อตกลงการใช้งานเว็บไซต์</p>
+        </div>
+        <button
+          type="button"
+          onClick={handleSave}
+          className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl flex items-center gap-2 transition-colors font-medium"
+        >
+          <Save className="w-5 h-5" />
+          บันทึก
+        </button>
+      </div>
+
+      <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-100 space-y-6">
+        <div className="space-y-4">
+          <label className="text-sm font-bold text-slate-700">เนื้อหาเงื่อนไขและข้อตกลง</label>
+          <textarea rows={15} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20" defaultValue="ข้อตกลงและเงื่อนไขการใช้บริการ... 1. การยอมรับเงื่อนไข..." />
+        </div>
+      </div>
+    </div>
+  );
+}
