@@ -1,11 +1,14 @@
-node_modules/
-# เฉพาะ .next/standalone และ .next/static ขึ้น Git (ไม่รวม cache ที่เกิน 100MB)
-.next/*
-!.next/standalone/
-!.next/static/
+
 coverage/
 .DS_Store
 *.log
 .env*
 !.env.example
 Credentials.json
+
+# Root node_modules เท่านั้น (ไม่ต้องขึ้น Git)
+/node_modules/
+
+# Next.js build cache (ไม่จำเป็นสำหรับ deploy)
+.next/cache/
+.next/trace
