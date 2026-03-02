@@ -16,15 +16,19 @@ export type DriveFolderType = keyof typeof FOLDER_NAMES;
 let driveInstance: ReturnType<typeof google.drive> | null = null;
 
 function getCredentialsPath(): string {
-  const envPath = process.env.GOOGLE_DRIVE_CREDENTIALS_PATH;
-  if (envPath) return path.resolve(process.cwd(), envPath);
+  const envPath = process.env.GOOGLE_DRIVE_CREDENTIALS_PATH?.trim();
+  if (envPath) {
+    // รองรับ path แบบ absolute (เช่น /home/ubuntu/flora/standalone/Credentials.json)
+    if (path.isAbsolute(envPath)) return path.normalize(envPath);
+    return path.resolve(process.cwd(), envPath);
+  }
   return path.resolve(process.cwd(), 'Credentials.json');
 }
 
 function loadCredentials(): object {
   const credPath = getCredentialsPath();
   if (!fs.existsSync(credPath)) {
-    throw new Error(`ไม่พบไฟล์ credentials: ${credPath}. ตั้งค่า GOOGLE_DRIVE_CREDENTIALS_PATH ใน .env หรือวาง Credentials.json ที่ root โปรเจกต์`);
+    throw new Error(`ไม่พบไฟล์ credentials: ${credPath}. ตั้งค่า GOOGLE_DRIVE_CREDENTIALS_PATH ใน .env ให้ตรงกับชื่อไฟล์จริง (บน Linux ตัวพิมพ์ต้องตรง เช่น Credentials.json ไม่ใช่ credentials.json)`);
   }
   const raw = fs.readFileSync(credPath, 'utf-8');
   return JSON.parse(raw) as object;
@@ -55,10 +59,19 @@ export function getDriveClient(): ReturnType<typeof google.drive> {
   return driveInstance;
 }
 
+/** ลบ quotes รอบๆ ค่า env (บางระบบ .env อ่านแล้วได้ "value") */
+function stripEnvId(value: string | undefined): string {
+  if (!value) return '';
+  const t = value.trim();
+  if ((t.startsWith('"') && t.endsWith('"')) || (t.startsWith("'") && t.endsWith("'")))
+    return t.slice(1, -1).trim();
+  return t;
+}
+
 /** หาหรือสร้างโฟลเดอร์ root (ชื่อจาก GOOGLE_DRIVE_ROOT_FOLDER_NAME หรือ "Flora") */
 export async function getOrCreateRootFolder(): Promise<string> {
   const drive = getDriveClient();
-  const rootId = process.env.GOOGLE_DRIVE_ROOT_FOLDER_ID;
+  const rootId = stripEnvId(process.env.GOOGLE_DRIVE_ROOT_FOLDER_ID);
   if (rootId) return rootId;
 
   const listParams: { q: string; fields: string; pageSize: number; supportsAllDrives?: boolean; includeItemsFromAllDrives?: boolean } = {
@@ -90,7 +103,8 @@ const FOLDER_ID_ENV: Record<DriveFolderType, string> = {
 
 /** หาหรือสร้างโฟลเดอร์หลักย่อย (user-profiles | products | articles) — ถ้าใส่ไอดีใน .env ใช้ค่านั้น ไม่ใส่วิธีระบบสร้างใต้ root */
 export async function getOrCreateMainSubfolder(folderType: DriveFolderType): Promise<string> {
-  const envId = process.env[FOLDER_ID_ENV[folderType]]?.trim();
+  const raw = process.env[FOLDER_ID_ENV[folderType]];
+  const envId = stripEnvId(raw);
   if (envId) return envId;
 
   const drive = getDriveClient();

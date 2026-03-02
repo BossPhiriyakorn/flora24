@@ -96,6 +96,7 @@ export default function NewArticlePage() {
       return;
     }
     setSaving(true);
+    let articleId: string | undefined;
     try {
       const payload = {
         title,
@@ -117,26 +118,49 @@ export default function NewArticlePage() {
       });
       const data = await res.json();
       if (!res.ok) { showToast(data.error ?? 'บันทึกล้มเหลว', 'error'); return; }
-      const articleId = data.id?.toString?.() ?? data.id;
+      articleId = data.id?.toString?.() ?? data.id;
+
       if (featuredWebpFile && articleId) {
-        const fd = new FormData();
-        fd.append('file', featuredWebpFile);
-        const upRes = await fetch(`/api/admin/upload/article/${articleId}`, { method: 'POST', body: fd });
-        const upData = await upRes.json();
-        if (!upRes.ok) { showToast(upData.error ?? 'อัปโหลดรูปไม่สำเร็จ', 'error'); return; }
-        const url = upData.url;
-        if (url) {
-          await fetch(`/api/admin/articles/${articleId}`, {
-            method:  'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body:    JSON.stringify({ ...payload, featuredImageUrl: url }),
-          });
+        let imageOk = false;
+        try {
+          const fd = new FormData();
+          fd.append('file', featuredWebpFile);
+          const upRes = await fetch(`/api/admin/upload/article/${articleId}`, { method: 'POST', body: fd });
+          const upData = await upRes.json().catch(() => ({ error: 'อัปโหลดรูปไม่สำเร็จ' }));
+          if (!upRes.ok) {
+            showToast(upData.error ?? 'อัปโหลดรูปไม่สำเร็จ บทความจะไม่ถูกบันทึก', 'error');
+          } else {
+            const url = upData.url;
+            if (url) {
+              const putRes = await fetch(`/api/admin/articles/${articleId}`, {
+                method:  'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body:    JSON.stringify({ ...payload, featuredImageUrl: url }),
+              });
+              if (putRes.ok) imageOk = true;
+              else showToast('อัปเดตรูปล้มเหลว บทความจะไม่ถูกบันทึก', 'error');
+            } else {
+              showToast('อัปโหลดรูปไม่สำเร็จ บทความจะไม่ถูกบันทึก', 'error');
+            }
+          }
+        } catch (e) {
+          const msg = e instanceof Error ? e.message : 'การอัปโหลดรูปล้มเหลว';
+          showToast(msg + ' บทความจะไม่ถูกบันทึก', 'error');
+        }
+        if (!imageOk) {
+          await fetch(`/api/admin/articles/${articleId}`, { method: 'DELETE' });
+          return;
         }
       }
+
       showToast('บันทึกบทความสำเร็จ', 'success');
       router.push('/admin/articles');
-    } catch {
-      showToast('เกิดข้อผิดพลาด', 'error');
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'เกิดข้อผิดพลาด';
+      showToast(msg, 'error');
+      if (articleId && featuredWebpFile) {
+        try { await fetch(`/api/admin/articles/${articleId}`, { method: 'DELETE' }); } catch { /* ignore */ }
+      }
     } finally {
       setSaving(false);
     }

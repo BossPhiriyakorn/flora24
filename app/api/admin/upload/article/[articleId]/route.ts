@@ -41,9 +41,8 @@ export async function POST(
     return NextResponse.json({ ok: true, url });
   } catch (err: unknown) {
     console.error('[upload/article]', err);
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : 'อัปโหลดไม่สำเร็จ' },
-      { status: 500 }
-    );
+    const message =
+      err instanceof Error ? err.message : typeof err === 'string' ? err : 'อัปโหลดไม่สำเร็จ';
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

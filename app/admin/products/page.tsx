@@ -47,6 +47,7 @@ function ProductModal({
   const [imagePreview, setImagePreview] = React.useState<string | null>(null);
   const [errors, setErrors]       = React.useState<Record<string, string>>({});
   const [saving, setSaving]       = React.useState(false);
+  const submittingRef             = React.useRef(false);
 
   // ล้าง preview เมื่อปิดหรือเปลี่ยน initial
   React.useEffect(() => {
@@ -65,8 +66,11 @@ function ProductModal({
   }
 
   async function handleSubmit() {
+    if (submittingRef.current) return; // ป้องกันกดซ้ำก่อน re-render
     if (!validate()) return;
+    submittingRef.current = true;
     setSaving(true);
+    let createdProductId: string | null = null; // ใช้ลบสินค้าที่สร้างแล้วถ้าอัปโหลดรูปล้ม
     try {
       const productId = mode === 'edit' ? initial!._id : null;
       let finalImageUrl = mode === 'edit' ? (initial?.imageUrl ?? '') : '';
@@ -79,29 +83,39 @@ function ProductModal({
         const data = await res.json();
         if (!res.ok) { showToast(data.error ?? 'บันทึกล้มเหลว', 'error'); return; }
         const newId = data.id ?? data._id;
+        createdProductId = newId ?? null;
         if (imageFile && newId) {
-          const fd = new FormData();
-          fd.append('file', imageFile);
-          const upRes = await fetch(`/api/admin/upload/product/${newId}`, { method: 'POST', body: fd });
-          const upData = await upRes.json();
-          if (!upRes.ok) {
-            showToast(upData.error ?? 'อัปโหลดรูปไม่สำเร็จ', 'error');
+          try {
+            const fd = new FormData();
+            fd.append('file', imageFile);
+            const upRes = await fetch(`/api/admin/upload/product/${newId}`, { method: 'POST', body: fd });
+            const upData = await upRes.json().catch(() => ({ error: 'อัปโหลดรูปไม่สำเร็จ' }));
+            if (!upRes.ok) {
+              showToast(upData.error ?? 'อัปโหลดรูปไม่สำเร็จ', 'error');
+              await fetch(`/api/admin/products/${newId}`, { method: 'DELETE' });
+              createdProductId = null;
+              return;
+            }
+            finalImageUrl = upData.url ?? '';
+            const putRes = await fetch(`/api/admin/products/${newId}`, {
+              method: 'PUT', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ ...createBody, imageUrl: finalImageUrl }),
+            });
+            if (!putRes.ok) { showToast('อัปเดตรูปไม่สำเร็จ', 'error'); return; }
+          } catch (e) {
+            const msg = e instanceof Error ? e.message : 'การอัปโหลดรูปล้มเหลว';
+            showToast(msg, 'error');
             await fetch(`/api/admin/products/${newId}`, { method: 'DELETE' });
+            createdProductId = null;
             return;
           }
-          finalImageUrl = upData.url ?? '';
-          const putRes = await fetch(`/api/admin/products/${newId}`, {
-            method: 'PUT', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ ...createBody, imageUrl: finalImageUrl }),
-          });
-          if (!putRes.ok) { showToast('อัปเดตรูปไม่สำเร็จ', 'error'); return; }
         }
       } else {
         if (imageFile && productId) {
           const fd = new FormData();
           fd.append('file', imageFile);
           const upRes = await fetch(`/api/admin/upload/product/${productId}`, { method: 'POST', body: fd });
-          const upData = await upRes.json();
+          const upData = await upRes.json().catch(() => ({ error: 'อัปโหลดรูปไม่สำเร็จ' }));
           if (!upRes.ok) { showToast(upData.error ?? 'อัปโหลดรูปไม่สำเร็จ', 'error'); return; }
           finalImageUrl = upData.url ?? '';
         }
@@ -115,7 +129,14 @@ function ProductModal({
       showToast(mode === 'add' ? 'เพิ่มสินค้าสำเร็จ' : 'อัปเดตสินค้าสำเร็จ', 'success');
       onSaved();
       onClose();
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'เกิดข้อผิดพลาด';
+      showToast(msg, 'error');
+      if (createdProductId) {
+        try { await fetch(`/api/admin/products/${createdProductId}`, { method: 'DELETE' }); } catch { /* ignore */ }
+      }
     } finally {
+      submittingRef.current = false;
       setSaving(false);
     }
   }
@@ -223,10 +244,10 @@ function ProductModal({
           <button onClick={onClose} className="px-5 py-2.5 border border-slate-200 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors">
             ยกเลิก
           </button>
-          <button onClick={handleSubmit} disabled={saving}
-            className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
-            {saving && <Loader2 className="w-4 h-4 animate-spin" />}
-            {mode === 'add' ? 'เพิ่มสินค้า' : 'บันทึก'}
+          <button type="button" onClick={handleSubmit} disabled={saving}
+            className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-70 disabled:pointer-events-none text-white rounded-lg text-sm font-medium transition-colors inline-flex items-center gap-2">
+            {saving && <Loader2 className="w-4 h-4 animate-spin shrink-0" />}
+            {saving ? (mode === 'add' ? 'กำลังเพิ่ม...' : 'กำลังบันทึก...') : (mode === 'add' ? 'เพิ่มสินค้า' : 'บันทึก')}
           </button>
         </div>
       </div>
