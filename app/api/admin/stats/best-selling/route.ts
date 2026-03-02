@@ -29,7 +29,7 @@ export async function GET(req: NextRequest) {
       for (const item of items) {
         const key = item.productId ?? item.name ?? 'unknown';
         const existing = byKey.get(key);
-        const qty = Number(item.qty) || 0;
+        const qty = Number(item.qty ?? item.quantity) || 0;
         if (existing) {
           existing.totalQty += qty;
           if (!existing.imageUrl && item.imageUrl) existing.imageUrl = item.imageUrl;

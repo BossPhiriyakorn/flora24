@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { connectDB, ObjectId, type UserDoc } from '@/lib/mongodb';
+import { requireUser, isNextResponse } from '@/lib/api-helpers';
 import { getStripe, toSatang, isPaymentGatewayConfigured } from '@/lib/stripe';
 
 export interface CreateIntentBody {
@@ -7,6 +9,8 @@ export interface CreateIntentBody {
   method: 'promptpay' | 'card';
   customerEmail?: string;
   customerName?: string;
+  /** บัตรที่บันทึกไว้ (pm_xxx) — บังคับเมื่อ method === 'card' เพื่อใช้บัตรซ้ำได้ */
+  payment_method?: string;
 }
 
 export interface CreateIntentResponse {
@@ -20,13 +24,12 @@ export interface CreateIntentResponse {
 export async function POST(req: NextRequest) {
   try {
     const body: CreateIntentBody = await req.json();
-    const { orderId, amount, method, customerEmail, customerName } = body;
+    const { orderId, amount, method, customerEmail, customerName, payment_method: paymentMethodId } = body;
 
     if (!orderId || !amount || !method) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    // ตรวจสอบว่า Gateway เปิดใช้และตั้งค่าแล้ว (เทียบ line_flex_tem: isConfigured = ENABLED + SECRET_KEY)
     if (!isPaymentGatewayConfigured()) {
       return NextResponse.json(
         {
@@ -38,11 +41,9 @@ export async function POST(req: NextRequest) {
     }
 
     const stripe = getStripe();
-
     let paymentIntent: import('stripe').Stripe.PaymentIntent;
 
     if (method === 'promptpay') {
-      // Stripe บังคับให้มี billing_details.email สำหรับ PromptPay PaymentMethod
       const pm = await stripe.paymentMethods.create({
         type: 'promptpay',
         billing_details: {
@@ -65,10 +66,31 @@ export async function POST(req: NextRequest) {
         },
       });
     } else {
+      // บัตรที่บันทึกไว้ — ต้องมี payment_method และ user ต้องมี Stripe Customer
+      if (!paymentMethodId || !String(paymentMethodId).startsWith('pm_')) {
+        return NextResponse.json(
+          { error: 'กรุณาเลือกบัตรที่ผูกไว้ หรือใช้ชำระผ่าน QR' },
+          { status: 400 }
+        );
+      }
+      const auth = await requireUser(req);
+      if (isNextResponse(auth)) return auth;
+
+      const db = await connectDB();
+      const user = await db.collection<UserDoc>('users').findOne({ _id: new ObjectId(auth.sub) });
+      if (!user?.stripeCustomerId) {
+        return NextResponse.json(
+          { error: 'กรุณาไปที่หน้าโปรไฟล์ → บัตรที่ผูกไว้ แล้วผูกบัตรใหม่หนึ่งครั้ง (บัตรเดิมที่ผูกก่อนอัปเดตระบบใช้ได้ครั้งเดียว)' },
+          { status: 400 }
+        );
+      }
+
       paymentIntent = await stripe.paymentIntents.create({
         amount: toSatang(amount),
         currency: 'thb',
         payment_method_types: ['card'],
+        customer: user.stripeCustomerId,
+        payment_method: paymentMethodId,
         metadata: {
           orderId,
           customerName: customerName ?? '',

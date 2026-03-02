@@ -1,1 +1,6 @@
 @import "tailwindcss";
+
+@theme {
+  /* ENG = Prompt (latin), ไทย = Kanit (latin+thai) */
+  --font-sans: var(--font-prompt), var(--font-kanit), ui-sans-serif, sans-serif;
+}

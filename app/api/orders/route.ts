@@ -41,13 +41,19 @@ export async function POST(req: NextRequest) {
 
     const orderId = `ORD-${Date.now()}`;
 
+    // ปกติ items ส่ง quantity มา — ใส่ qty ด้วยเพื่อให้แอดมิน (ที่ใช้ item.qty) แสดงจำนวนได้
+    const normalizedItems = items.map((i: any) => {
+      const qty = Math.max(1, Number(i.quantity ?? i.qty) || 1);
+      return { ...i, quantity: qty, qty };
+    });
+
     const order: OrderDoc = {
       orderId,
       userId:           new ObjectId(auth.sub),
       customerName:     `${user.firstName} ${user.lastName}`,
       customerPhone:    user.phone ?? '',
       customerEmail:    user.email,
-      items,
+      items:            normalizedItems,
       subtotal:         Number(subtotal),
       deliveryFee:      Number(deliveryFee ?? 0),
       total:            Number(total),

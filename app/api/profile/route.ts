@@ -37,7 +37,7 @@ export async function PUT(req: NextRequest) {
     if (firstName?.trim()) update.firstName = firstName.trim();
     if (lastName?.trim())  update.lastName  = lastName.trim();
     if (nickname != null)  update.nickname  = nickname.trim();
-    if (phone    != null)  update.phone     = phone.trim();
+    if (phone    != null)  update.phone     = String(phone).replace(/\D/g, '').slice(0, 10).trim() || undefined;
 
     const db = await connectDB();
     await db.collection('users').updateOne(

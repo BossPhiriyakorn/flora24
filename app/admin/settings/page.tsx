@@ -1,19 +1,147 @@
 'use client';
 
 import * as React from 'react';
-import { motion } from 'motion/react';
-import { Settings, Shield, Bell, Globe, Save, Database, Lock, Loader2 } from 'lucide-react';
+import { useSearchParams } from 'next/navigation';
+import { Bell, Globe, Save, Database, Lock, Loader2 } from 'lucide-react';
 import { useToast } from '@/components/Toast';
 
 const textareaCls = 'w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 resize-y min-h-[80px]';
 
+const NOTIF_TYPE_LABEL: Record<string, string> = {
+  new_order: 'คำสั่งซื้อใหม่',
+  payment_pending: 'รอตรวจสอบสลิป',
+  order_cancelled: 'ยกเลิกคำสั่งซื้อ',
+  order_received: 'ยืนยันรับสินค้าแล้ว',
+  admin_login: 'แอดมินเข้าสู่ระบบ',
+  new_article: 'บทความใหม่',
+  new_customer: 'ผู้ใช้สมัครใหม่',
+  new_product: 'สินค้าใหม่',
+  new_product_category: 'หมวดหมู่สินค้าใหม่',
+  new_article_category: 'หมวดหมู่บทความใหม่',
+  settings_updated: 'อัปเดตการตั้งค่า',
+};
+
+function formatDateTimeThai(ts: number | string): string {
+  const d = new Date(ts);
+  if (isNaN(d.getTime())) return '';
+  return d.toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' }) + ' ' + d.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+}
+
+type NotifRow = {
+  id?: string;
+  _id?: string;
+  type: string;
+  title: string;
+  body?: string;
+  actorName?: string;
+  createdAt?: number | string;
+  timestamp?: number;
+  refType?: string;
+  refId?: string;
+};
+
+function NotificationsTab() {
+  const [dateFrom, setDateFrom] = React.useState('');
+  const [dateTo, setDateTo] = React.useState('');
+  const [list, setList] = React.useState<NotifRow[]>([]);
+  const [loading, setLoading] = React.useState(true);
+
+  const fetchList = React.useCallback(() => {
+    setLoading(true);
+    const params = new URLSearchParams();
+    if (dateFrom) params.set('dateFrom', dateFrom);
+    if (dateTo) params.set('dateTo', dateTo);
+    params.set('limit', '200');
+    fetch(`/api/admin/notifications?${params}`, { credentials: 'include' })
+      .then(r => r.ok ? r.json() : [])
+      .then((data: { notifications?: NotifRow[] }) => setList(Array.isArray(data.notifications) ? data.notifications : []))
+      .catch(() => setList([]))
+      .finally(() => setLoading(false));
+  }, [dateFrom, dateTo]);
+
+  React.useEffect(() => {
+    fetchList();
+  }, [fetchList]);
+
+  const typeLabel = (type: string) => NOTIF_TYPE_LABEL[type] ?? type;
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-center gap-4">
+        <div className="flex items-center gap-2">
+          <label className="text-sm text-slate-600">ตั้งแต่</label>
+          <input
+            type="date"
+            value={dateFrom}
+            onChange={e => setDateFrom(e.target.value)}
+            className="px-3 py-2 border border-slate-200 rounded-lg text-sm"
+          />
+        </div>
+        <div className="flex items-center gap-2">
+          <label className="text-sm text-slate-600">ถึง</label>
+          <input
+            type="date"
+            value={dateTo}
+            onChange={e => setDateTo(e.target.value)}
+            className="px-3 py-2 border border-slate-200 rounded-lg text-sm"
+          />
+        </div>
+        <button
+          type="button"
+          onClick={fetchList}
+          className="px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded-lg text-sm font-medium text-slate-700"
+        >
+          กรอง
+        </button>
+      </div>
+
+      {loading ? (
+        <div className="py-8 flex justify-center"><Loader2 className="w-8 h-8 animate-spin text-emerald-600" /></div>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm border-collapse">
+            <thead>
+              <tr className="border-b border-slate-200">
+                <th className="text-left py-3 px-2 font-semibold text-slate-600">ประเภท</th>
+                <th className="text-left py-3 px-2 font-semibold text-slate-600">รายละเอียด</th>
+                <th className="text-left py-3 px-2 font-semibold text-slate-600">ผู้ดำเนินการ</th>
+                <th className="text-left py-3 px-2 font-semibold text-slate-600">วันที่</th>
+              </tr>
+            </thead>
+            <tbody>
+              {list.length === 0 ? (
+                <tr><td colSpan={4} className="py-8 text-center text-slate-400">ไม่มีรายการแจ้งเตือน</td></tr>
+              ) : (
+                list.map((row, index) => (
+                  <tr key={row.id ?? row._id ?? `notif-${index}`} className="border-b border-slate-100 hover:bg-slate-50">
+                    <td className="py-3 px-2 font-medium text-slate-800">{typeLabel(row.type)}</td>
+                    <td className="py-3 px-2 text-slate-600">{row.body ?? row.title}</td>
+                    <td className="py-3 px-2 text-slate-600">{row.actorName ?? '-'}</td>
+                    <td className="py-3 px-2 text-slate-500 whitespace-nowrap">{formatDateTimeThai(row.timestamp ?? row.createdAt ?? 0)}</td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function SettingsPage() {
-  const [activeTab, setActiveTab] = React.useState('ทั่วไป');
+  const searchParams = useSearchParams();
+  const tabFromUrl = searchParams.get('tab');
+  const [activeTab, setActiveTab] = React.useState(() => (tabFromUrl === 'notifications' ? 'การแจ้งเตือน' : 'ทั่วไป'));
   const [termsContent, setTermsContent] = React.useState('');
   const [privacyContent, setPrivacyContent] = React.useState('');
   const [loading, setLoading] = React.useState(true);
   const [saving, setSaving] = React.useState(false);
   const { showToast } = useToast();
+
+  React.useEffect(() => {
+    if (tabFromUrl === 'notifications') setActiveTab('การแจ้งเตือน');
+  }, [tabFromUrl]);
 
   React.useEffect(() => {
     fetch('/api/admin/settings/legal', { cache: 'no-store', credentials: 'include' })
@@ -111,7 +239,11 @@ export default function SettingsPage() {
               </div>
             )}
 
-            {activeTab !== 'ทั่วไป' && (
+            {activeTab === 'การแจ้งเตือน' && (
+              <NotificationsTab />
+            )}
+
+            {activeTab !== 'ทั่วไป' && activeTab !== 'การแจ้งเตือน' && (
               <div className="py-12 text-center text-slate-400 text-sm">
                 ส่วนการตั้งค่า {activeTab} กำลังอยู่ระหว่างการพัฒนา
               </div>

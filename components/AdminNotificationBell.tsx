@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import {
   Bell, BellOff, BellRing, X, CheckCheck, Trash2,
   ShoppingBag, CreditCard, XCircle, ChevronRight,
-  LogIn, FileText, Users, Settings,
+  LogIn, FileText, Users, Settings, CheckCircle2,
 } from 'lucide-react';
 import {
   isNotificationSupported,
@@ -39,6 +39,7 @@ const TYPE_CONFIG: Record<AdminNotifType, { icon: React.ReactNode; color: string
   new_order:            { icon: <ShoppingBag className="w-4 h-4" />, color: 'text-emerald-600', bg: 'bg-emerald-100' },
   payment_pending:      { icon: <CreditCard   className="w-4 h-4" />, color: 'text-amber-600',  bg: 'bg-amber-100' },
   order_cancelled:      { icon: <XCircle      className="w-4 h-4" />, color: 'text-red-600',    bg: 'bg-red-100' },
+  order_received:       { icon: <CheckCircle2 className="w-4 h-4" />, color: 'text-teal-600',  bg: 'bg-teal-100' },
   admin_login:          { icon: <LogIn        className="w-4 h-4" />, color: 'text-blue-600',   bg: 'bg-blue-100' },
   new_article:          { icon: <FileText     className="w-4 h-4" />, color: 'text-violet-600', bg: 'bg-violet-100' },
   new_customer:         { icon: <Users        className="w-4 h-4" />, color: 'text-cyan-600',   bg: 'bg-cyan-100' },
@@ -292,10 +293,10 @@ export default function AdminNotificationBell() {
             {notifs.length > 0 && (
               <div className="border-t border-slate-100 px-4 py-2.5 text-center">
                 <button
-                  onClick={() => { router.push('/admin/orders'); setOpen(false); }}
+                  onClick={() => { router.push('/admin/settings?tab=notifications'); setOpen(false); }}
                   className="text-xs font-bold text-emerald-600 hover:underline"
                 >
-                  ดูคำสั่งซื้อทั้งหมด →
+                  ดูการแจ้งเตือนทั้งหมด →
                 </button>
               </div>
             )}

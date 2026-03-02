@@ -355,12 +355,13 @@ export default function ProfilePage() {
     ]).then(([profileData, cardsData]) => {
       if (profileData.user) {
         const u = profileData.user;
+        const rawPhone = (u.phone ?? '').replace(/\D/g, '').slice(0, 10);
         const mapped: UserProfile = {
           firstName: u.firstName ?? '',
           lastName:  u.lastName  ?? '',
           nickname:  u.nickname  ?? '',
           email:     u.email     ?? '',
-          phone:     u.phone     ?? '',
+          phone:     rawPhone,
           avatar:    u.linePictureUrl ?? null,
         };
         setUser(mapped);
@@ -474,7 +475,9 @@ export default function ProfilePage() {
               <Field
                 label="เบอร์โทรศัพท์" icon={<Phone className="w-3.5 h-3.5" />}
                 value={form.phone} edit={editMode} type="tel"
-                onChange={v => setForm(f => ({ ...f, phone: v }))}
+                maxLength={10}
+                inputMode="numeric"
+                onChange={v => setForm(f => ({ ...f, phone: v.replace(/\D/g, '').slice(0, 10) }))}
               />
 
               {editMode && (
@@ -567,7 +570,7 @@ export default function ProfilePage() {
 
 /* ─── FIELD COMPONENT ─── */
 function Field({
-  label, value, edit, onChange, type = 'text', icon,
+  label, value, edit, onChange, type = 'text', icon, maxLength, inputMode,
 }: {
   label: string;
   value: string;
@@ -575,6 +578,8 @@ function Field({
   onChange: (v: string) => void;
   type?: string;
   icon?: React.ReactNode;
+  maxLength?: number;
+  inputMode?: React.HTMLAttributes<HTMLInputElement>['inputMode'];
 }) {
   return (
     <div>
@@ -589,6 +594,8 @@ function Field({
           <input
             type={type}
             value={value}
+            maxLength={maxLength}
+            inputMode={inputMode}
             onChange={e => onChange(e.target.value)}
             className={`w-full bg-white/5 border border-white/10 focus:border-[#E11D48] rounded-xl py-2.5 text-sm text-white placeholder-white/20 focus:outline-none transition-colors ${icon ? 'pl-9 pr-4' : 'px-4'}`}
           />

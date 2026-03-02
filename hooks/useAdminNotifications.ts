@@ -9,6 +9,7 @@ export type AdminNotifType =
   | 'new_order'
   | 'payment_pending'
   | 'order_cancelled'
+  | 'order_received'
   | 'admin_login'
   | 'new_article'
   | 'new_customer'

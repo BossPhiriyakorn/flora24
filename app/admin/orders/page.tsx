@@ -109,8 +109,8 @@ function OrderDetailModal({ order, onClose }: { order: ApiOrder; onClose: () => 
             <div className="space-y-2 bg-slate-50 rounded-xl p-4">
               {order.items.map((item, i) => (
                 <div key={i} className="flex justify-between text-sm">
-                  <span className="text-slate-700">{item.name} <span className="text-slate-400">×{item.qty}</span></span>
-                  <span className="font-bold">{formatPrice(item.price * item.qty)} ฿</span>
+                  <span className="text-slate-700">{item.name ?? item.productName} <span className="text-slate-400">×{item.qty ?? item.quantity ?? 1}</span></span>
+                  <span className="font-bold">{formatPrice(item.price * (item.qty ?? item.quantity ?? 1))} ฿</span>
                 </div>
               ))}
               <div className="pt-2 border-t border-slate-200 space-y-1">
@@ -269,8 +269,16 @@ function ShippingModal({ orderId, onDone, onClose }: { orderId: string; onDone: 
             <label className="text-sm font-bold text-slate-700 flex items-center gap-2">
               <Phone className="w-4 h-4 text-slate-400" /> เบอร์ติดต่อผู้จัดส่ง
             </label>
-            <input type="tel" value={form.courierContact} onChange={e => setForm(p => ({ ...p, courierContact: e.target.value }))}
-              placeholder="08x-xxx-xxxx"
+            <input
+              type="tel"
+              inputMode="numeric"
+              maxLength={10}
+              value={form.courierContact}
+              onChange={e => {
+                const v = e.target.value.replace(/\D/g, '').slice(0, 10);
+                setForm(p => ({ ...p, courierContact: v }));
+              }}
+              placeholder="08xxxxxxxx"
               className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
             />
           </div>
@@ -506,6 +514,7 @@ export default function OrdersPage() {
                 <tr className="bg-slate-50/50 text-slate-500 text-xs uppercase tracking-wider font-bold">
                   <th className="px-4 py-3 w-6" />
                   <th className="px-4 py-3">Order / ลูกค้า</th>
+                  <th className="px-4 py-3">เบอร์โทร</th>
                   <th className="px-4 py-3">สินค้า</th>
                   <th className="px-4 py-3">ชำระ</th>
                   <th className="px-4 py-3">สถานะ Order</th>
@@ -533,6 +542,9 @@ export default function OrdersPage() {
                           <p className="text-xs font-mono font-bold text-slate-900">{order.orderId}</p>
                           <p className="text-xs text-slate-500 mt-0.5">{order.customerName}</p>
                           <p className="text-[10px] text-slate-400">{formatDate(order.createdAt)}</p>
+                        </td>
+                        <td className="px-4 py-3">
+                          <p className="text-xs text-slate-700 font-medium">{order.customerPhone || '-'}</p>
                         </td>
                         <td className="px-4 py-3">
                           <p className="text-sm font-bold text-slate-900">{formatPrice(order.total)} ฿</p>
@@ -595,7 +607,7 @@ export default function OrdersPage() {
                       <AnimatePresence>
                         {expanded && (
                           <tr>
-                            <td colSpan={6} className="px-0 py-0">
+                            <td colSpan={7} className="px-0 py-0">
                               <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }}
                                 exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.2 }}
                                 className="overflow-hidden bg-slate-50/50">
@@ -605,8 +617,8 @@ export default function OrdersPage() {
                                     <div className="space-y-1">
                                       {order.items.map((item, i) => (
                                         <div key={i} className="flex justify-between">
-                                          <span className="text-slate-600">{item.name} ×{item.qty}</span>
-                                          <span className="font-bold text-slate-800">{formatPrice(item.price * item.qty)} ฿</span>
+                                          <span className="text-slate-600">{item.name ?? item.productName} ×{item.qty ?? item.quantity ?? 1}</span>
+                                          <span className="font-bold text-slate-800">{formatPrice(item.price * (item.qty ?? item.quantity ?? 1))} ฿</span>
                                         </div>
                                       ))}
                                     </div>
@@ -629,7 +641,7 @@ export default function OrdersPage() {
                 })}
                 {!loading && orders.length === 0 && (
                   <tr>
-                    <td colSpan={6} className="px-6 py-16 text-center">
+                    <td colSpan={7} className="px-6 py-16 text-center">
                       <ShoppingBag className="w-10 h-10 text-slate-200 mx-auto mb-3" />
                       <p className="text-slate-400 text-sm">ไม่พบคำสั่งซื้อ</p>
                     </td>

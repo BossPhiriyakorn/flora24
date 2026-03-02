@@ -12,7 +12,7 @@ import { createAdminNotification } from '@/lib/adminNotifications';
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { token: tempToken, firstName, lastName, nickname, email, agreedToTerms } = body;
+    const { token: tempToken, firstName, lastName, nickname, email, phone, agreedToTerms } = body;
 
     if (!agreedToTerms) {
       return NextResponse.json({ error: 'กรุณายอมรับข้อกำหนดการใช้งาน' }, { status: 400 });
@@ -20,6 +20,7 @@ export async function POST(req: NextRequest) {
     if (!firstName?.trim() || !lastName?.trim()) {
       return NextResponse.json({ error: 'กรุณากรอกชื่อและนามสกุล' }, { status: 400 });
     }
+    const normalizedPhone = typeof phone === 'string' ? phone.replace(/\D/g, '').slice(0, 10) : '';
 
     // ─── Verify temp token ───
     const secret = new TextEncoder().encode(
@@ -73,6 +74,7 @@ export async function POST(req: NextRequest) {
       lastName:        lastName.trim(),
       nickname:        nickname?.trim() ?? '',
       email:           normalizedEmail,
+      phone:           normalizedPhone || undefined,
       lineUserId:      lineData.lineUserId as string,
       lineDisplayName: lineData.displayName as string,
       linePictureUrl:  lineData.pictureUrl as string,

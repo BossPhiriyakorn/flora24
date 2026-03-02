@@ -1,8 +1,9 @@
 @import "tailwindcss";
 
 @theme {
-  --font-sans: var(--font-sans);
-  --font-mono: var(--font-mono);
+  /* ใช้ Prompt + Kanit จาก root */
+  --font-sans: var(--font-prompt), var(--font-kanit), ui-sans-serif, sans-serif;
+  --font-mono: ui-monospace, monospace;
 }
 
 @layer base {

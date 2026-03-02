@@ -49,6 +49,7 @@ export async function POST(req: NextRequest) {
       lastName: doc.lastName,
       nickname: doc.nickname,
       email: doc.email,
+      phone: doc.phone ?? undefined,
       passwordHash: doc.passwordHash,
       provider: 'email',
       status: 'active',

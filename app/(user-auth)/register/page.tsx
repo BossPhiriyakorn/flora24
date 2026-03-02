@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'motion/react';
 import {
-  User, Mail, Lock, Eye, EyeOff, CheckCircle2, AlertCircle, Loader2, Flower2, X, FileText, ShieldCheck,
+  User, Mail, Lock, Eye, EyeOff, CheckCircle2, AlertCircle, Loader2, Flower2, X, FileText, ShieldCheck, Phone,
 } from 'lucide-react';
 
 const TERMS_PLACEHOLDER = `ข้อกำหนดการใช้งาน
@@ -74,7 +74,7 @@ type DocModal = 'terms' | 'privacy' | null;
 
 export default function RegisterPage() {
   const router = useRouter();
-  const [form, setForm] = useState({ firstName:'', lastName:'', nickname:'', email:'', password:'', confirmPassword:'' });
+  const [form, setForm] = useState({ firstName:'', lastName:'', nickname:'', email:'', phone:'', password:'', confirmPassword:'' });
   const [showPass, setShowPass] = useState(false);
   const [showConf, setShowConf] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
@@ -216,6 +216,28 @@ export default function RegisterPage() {
 
             <div>
               <label className="block text-[10px] font-black uppercase tracking-widest text-white/40 mb-1.5">
+                เบอร์โทรศัพท์ <span className="text-white/25">(ไม่บังคับ สูงสุด 10 หลัก)</span>
+              </label>
+              <div className="relative">
+                <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/25 pointer-events-none" />
+                <input
+                  type="tel"
+                  inputMode="numeric"
+                  maxLength={10}
+                  value={form.phone}
+                  onChange={e => {
+                    const v = e.target.value.replace(/\D/g, '').slice(0, 10);
+                    setForm(p => ({ ...p, phone: v }));
+                  }}
+                  placeholder="08xxxxxxxx"
+                  autoComplete="tel"
+                  className={`${inputCls()} pl-11`}
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-[10px] font-black uppercase tracking-widest text-white/40 mb-1.5">
                 รหัสผ่าน <span className="text-[#E11D48]">*</span>
               </label>
               <div className="relative">
@@ -254,41 +276,47 @@ export default function RegisterPage() {
               {errors.confirmPassword && <FieldError msg={errors.confirmPassword} />}
             </div>
 
-            {/* ข้อกำหนดและนโยบาย — แยกคนละติ๊ก ต้องอ่านและยอมรับในโมดัลก่อน */}
+            {/* ข้อกำหนดและนโยบาย — ช่องติ๊กถูก คลิกแล้วเด้งป๊อปอัพให้อ่านและยอมรับ */}
             <div className="space-y-3">
               <p className="text-[10px] font-bold uppercase tracking-widest text-white/40">กรุณาอ่านและยอมรับทั้งสองรายการก่อนสมัคร</p>
               {/* ข้อกำหนดการใช้งาน */}
-              <div className="flex items-center gap-3">
-                {termsAccepted ? (
-                  <span className="flex items-center gap-2 text-xs text-white/70">
-                    <span className="w-5 h-5 rounded-md bg-[#E11D48] border-2 border-[#E11D48] flex items-center justify-center">
-                      <CheckCircle2 className="w-3 h-3 text-white" />
-                    </span>
-                    ข้อกำหนดการใช้งาน
-                  </span>
-                ) : (
-                  <button type="button" onClick={() => setDocModal('terms')} className="flex items-center gap-2 text-xs text-white/70 hover:text-[#E11D48] transition-colors">
-                    <FileText className="w-4 h-4" />
-                    <span className="underline">อ่านข้อกำหนดการใช้งาน</span>
-                  </button>
-                )}
-              </div>
+              <label
+                className="flex items-center gap-3 cursor-pointer group"
+                onClick={(e) => { e.preventDefault(); setDocModal('terms'); }}
+              >
+                <input
+                  type="checkbox"
+                  readOnly
+                  checked={termsAccepted}
+                  className="sr-only peer"
+                />
+                <span className={`w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 transition-colors group-hover:border-[#E11D48]/60 ${termsAccepted ? 'bg-[#E11D48] border-[#E11D48]' : 'border-white/30'}`}>
+                  {termsAccepted && <CheckCircle2 className="w-3 h-3 text-white" />}
+                </span>
+                <span className="flex items-center gap-2 text-xs text-white/70 group-hover:text-[#E11D48] transition-colors">
+                  <FileText className="w-4 h-4" />
+                  ข้อกำหนดการใช้งาน
+                </span>
+              </label>
               {/* นโยบายความเป็นส่วนตัว */}
-              <div className="flex items-center gap-3">
-                {privacyAccepted ? (
-                  <span className="flex items-center gap-2 text-xs text-white/70">
-                    <span className="w-5 h-5 rounded-md bg-[#E11D48] border-2 border-[#E11D48] flex items-center justify-center">
-                      <CheckCircle2 className="w-3 h-3 text-white" />
-                    </span>
-                    นโยบายความเป็นส่วนตัว
-                  </span>
-                ) : (
-                  <button type="button" onClick={() => setDocModal('privacy')} className="flex items-center gap-2 text-xs text-white/70 hover:text-[#E11D48] transition-colors">
-                    <ShieldCheck className="w-4 h-4" />
-                    <span className="underline">อ่านนโยบายความเป็นส่วนตัว</span>
-                  </button>
-                )}
-              </div>
+              <label
+                className="flex items-center gap-3 cursor-pointer group"
+                onClick={(e) => { e.preventDefault(); setDocModal('privacy'); }}
+              >
+                <input
+                  type="checkbox"
+                  readOnly
+                  checked={privacyAccepted}
+                  className="sr-only peer"
+                />
+                <span className={`w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 transition-colors group-hover:border-[#E11D48]/60 ${privacyAccepted ? 'bg-[#E11D48] border-[#E11D48]' : 'border-white/30'}`}>
+                  {privacyAccepted && <CheckCircle2 className="w-3 h-3 text-white" />}
+                </span>
+                <span className="flex items-center gap-2 text-xs text-white/70 group-hover:text-[#E11D48] transition-colors">
+                  <ShieldCheck className="w-4 h-4" />
+                  นโยบายความเป็นส่วนตัว
+                </span>
+              </label>
               {errors.terms && <FieldError msg={errors.terms} />}
             </div>
 

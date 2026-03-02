@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { connectDB, ObjectId, type SavedCardDoc, type CardBrand } from '@/lib/mongodb';
+import { connectDB, ObjectId, type SavedCardDoc, type CardBrand, type UserDoc } from '@/lib/mongodb';
 import { requireUser, isNextResponse } from '@/lib/api-helpers';
 import { getStripe, isPaymentGatewayConfigured } from '@/lib/stripe';
 
@@ -8,7 +8,7 @@ import { getStripe, isPaymentGatewayConfigured } from '@/lib/stripe';
    POST /api/profile/cards   — ผูกบัตรใหม่ผ่าน Stripe
    Body POST: { stripePaymentMethodId, holderName }
    - stripePaymentMethodId ต้องเป็น pm_xxx จาก stripe.createPaymentMethod() ที่ frontend
-   - API จะ verify กับ Stripe เพื่อดึง last4, brand, expMonth, expYear จริง
+   - API จะสร้าง/ดึง Stripe Customer แล้ว attach บัตรกับ Customer เพื่อให้ใช้บัตรซ้ำได้
 ──────────────────────────────────────────────────────────── */
 
 export async function GET(req: NextRequest) {
@@ -53,6 +53,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const stripe = getStripe();
+
     // ── Verify กับ Stripe และดึงข้อมูลบัตรจริง ──
     let last4: string;
     let brand: CardBrand;
@@ -60,7 +62,6 @@ export async function POST(req: NextRequest) {
     let expYear: number;
 
     try {
-      const stripe = getStripe();
       const pm = await stripe.paymentMethods.retrieve(stripePaymentMethodId);
 
       if (pm.type !== 'card' || !pm.card) {
@@ -83,11 +84,33 @@ export async function POST(req: NextRequest) {
     }
 
     const db    = await connectDB();
+    const users = db.collection<UserDoc>('users');
     const cards = db.collection<SavedCardDoc>('saved_cards');
 
-    // เช็ค duplicate
     const dup = await cards.findOne({ stripePaymentMethodId });
     if (dup) return NextResponse.json({ error: 'บัตรนี้ผูกไว้แล้ว' }, { status: 409 });
+
+    const userId = new ObjectId(auth.sub);
+    const user = await users.findOne({ _id: userId });
+    if (!user) return NextResponse.json({ error: 'ไม่พบผู้ใช้' }, { status: 404 });
+
+    // สร้าง Stripe Customer ถ้ายังไม่มี — เพื่อให้บัตรที่ attach ใช้ซ้ำได้
+    let stripeCustomerId = user.stripeCustomerId;
+    if (!stripeCustomerId) {
+      const customer = await stripe.customers.create({
+        email: user.email,
+        name: [user.firstName, user.lastName].filter(Boolean).join(' ').trim() || undefined,
+        metadata: { userId: auth.sub },
+      });
+      stripeCustomerId = customer.id;
+      await users.updateOne(
+        { _id: userId },
+        { $set: { stripeCustomerId, updatedAt: new Date() } },
+      );
+    }
+
+    // Attach PaymentMethod กับ Customer — บังคับของ Stripe เพื่อใช้บัตรซ้ำได้
+    await stripe.paymentMethods.attach(stripePaymentMethodId, { customer: stripeCustomerId });
 
     // บัตรแรกของ user → set isDefault=true
     const cardCount = await cards.countDocuments({ userId: new ObjectId(auth.sub) });

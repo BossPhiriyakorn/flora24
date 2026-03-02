@@ -14,11 +14,12 @@ import { Elements, useStripe } from '@stripe/react-stripe-js';
 
 /* ─── TYPES ─── */
 type CartItem = {
-  id: number;
+  id?: string | number;
   name: string;
   price: number;
   image: string;
-  category: string;
+  category?: string;
+  quantity?: number;
 };
 
 type PayMethod = 'qr' | 'card';
@@ -307,7 +308,12 @@ function CheckoutContent() {
   useEffect(() => {
     try {
       const saved = localStorage.getItem('flora_cart');
-      if (saved) setCart(JSON.parse(saved));
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        const list = Array.isArray(parsed) ? parsed : [];
+        const normalized = list.map((item: any) => ({ ...item, quantity: Math.max(1, Number(item.quantity) || 1) }));
+        setCart(normalized);
+      }
     } catch { /* ignore */ }
     // โหลด user info สำหรับ Stripe billing_details
     fetch('/api/auth/me')
@@ -335,8 +341,9 @@ function CheckoutContent() {
       .catch(() => {});
   }, []);
 
-  const subtotal = cart.reduce((s, i) => s + i.price, 0);
+  const subtotal = cart.reduce((s, i) => s + (i.price ?? 0) * (i.quantity ?? 1), 0);
   const total = subtotal + DELIVERY_FEE;
+  const totalItemCount = cart.reduce((s, i) => s + (i.quantity ?? 1), 0);
 
   function removeItem(index: number) {
     const next = cart.filter((_, i) => i !== index);
@@ -361,7 +368,7 @@ function CheckoutContent() {
       productId:    item.id?.toString() ?? '',
       productName:  item.name,
       price:        item.price,
-      quantity:     1,
+      quantity:     Math.max(1, item.quantity ?? 1),
       imageUrl:     item.image,
     }));
     const body = {
@@ -409,11 +416,16 @@ function CheckoutContent() {
           setProcessing(false);
           return;
         }
-        // สร้าง PaymentIntent ที่ Stripe (ไม่เก็บข้อมูลบัตร — ส่งไปที่ Payment Gateway เท่านั้น)
+        // สร้าง PaymentIntent พร้อม customer + payment_method — บัตรที่ผูกไว้ใช้ซ้ำได้
         const intentRes = await fetch('/api/payment/create-intent', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ orderId: `card-${Date.now()}`, amount: total, method: 'card' }),
+          body: JSON.stringify({
+            orderId: `card-${Date.now()}`,
+            amount: total,
+            method: 'card',
+            payment_method: stripePmId,
+          }),
         });
         const intentData = await intentRes.json();
         if (!intentRes.ok) throw new Error(intentData.error ?? 'สร้างรายการชำระไม่สำเร็จ');
@@ -467,7 +479,7 @@ function CheckoutContent() {
           </div>
 
           {/* ── SECTION 1: รายการสินค้า ── */}
-          <Section icon={<ShoppingBag className="w-4 h-4" />} title="รายการสินค้า" subtitle={`${cart.length} รายการ`}>
+          <Section icon={<ShoppingBag className="w-4 h-4" />} title="รายการสินค้า" subtitle={`${totalItemCount} ชิ้น`}>
             {errors.cart && <ErrorMsg msg={errors.cart} />}
             {cart.length === 0 ? (
               <div className="text-center py-10 text-white/20">
@@ -476,20 +488,24 @@ function CheckoutContent() {
               </div>
             ) : (
               <div className="space-y-3">
-                {cart.map((item, i) => (
-                  <div key={i} className="flex items-center gap-3 p-3 bg-white/[0.03] border border-white/5 rounded-xl">
-                    <div className="relative w-14 h-14 rounded-lg overflow-hidden shrink-0">
-                      <Image src={item.image} alt={item.name} fill className="object-cover" referrerPolicy="no-referrer" />
+                {cart.map((item, i) => {
+                  const qty = item.quantity ?? 1;
+                  return (
+                    <div key={i} className="flex items-center gap-3 p-3 bg-white/[0.03] border border-white/5 rounded-xl">
+                      <div className="relative w-14 h-14 rounded-lg overflow-hidden shrink-0">
+                        <Image src={item.image} alt={item.name} fill className="object-cover" referrerPolicy="no-referrer" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-bold line-clamp-1">{item.name}</p>
+                        <p className="text-white/50 text-xs">×{qty}</p>
+                        <p className="text-[#E11D48] font-black text-sm">฿{(item.price * qty).toLocaleString()}</p>
+                      </div>
+                      <button onClick={() => removeItem(i)} className="p-1.5 text-white/20 hover:text-red-400 transition-colors hover:bg-red-500/10 rounded-lg">
+                        <Trash2 className="w-4 h-4" />
+                      </button>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-bold line-clamp-1">{item.name}</p>
-                      <p className="text-[#E11D48] font-black text-sm">฿{item.price.toLocaleString()}</p>
-                    </div>
-                    <button onClick={() => removeItem(i)} className="p-1.5 text-white/20 hover:text-red-400 transition-colors hover:bg-red-500/10 rounded-lg">
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </Section>
@@ -640,7 +656,7 @@ function CheckoutContent() {
           {/* ── SECTION 4: สรุปยอด ── */}
           <Section icon={<FileText className="w-4 h-4" />} title="สรุปยอด" subtitle="Order Total">
             <div className="space-y-3">
-              <SummaryRow label={`สินค้า (${cart.length} รายการ)`} value={`฿${subtotal.toLocaleString()}`} />
+              <SummaryRow label={`สินค้า (${totalItemCount} ชิ้น)`} value={`฿${subtotal.toLocaleString()}`} />
               <SummaryRow label="ค่าจัดส่ง" value={DELIVERY_FEE === 0 ? 'ฟรี' : `฿${DELIVERY_FEE}`} valueClass="text-emerald-400" />
               <div className="border-t border-white/5 pt-3">
                 <SummaryRow label="ยอดรวมทั้งหมด" value={`฿${total.toLocaleString()}`} bold />

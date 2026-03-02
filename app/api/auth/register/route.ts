@@ -19,12 +19,13 @@ function generateOtp(): string {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { firstName, lastName, nickname, email, password, confirmPassword } = body;
+    const { firstName, lastName, nickname, email, password, confirmPassword, phone } = body;
 
     // ─── Validate ───
     if (!firstName?.trim() || !lastName?.trim() || !email?.trim() || !password) {
       return NextResponse.json({ error: 'กรุณากรอกข้อมูลให้ครบ' }, { status: 400 });
     }
+    const normalizedPhone = typeof phone === 'string' ? phone.replace(/\D/g, '').slice(0, 10) : '';
     if (password !== confirmPassword) {
       return NextResponse.json({ error: 'รหัสผ่านไม่ตรงกัน' }, { status: 400 });
     }
@@ -63,6 +64,7 @@ export async function POST(req: NextRequest) {
       firstName: firstName.trim(),
       lastName: lastName.trim(),
       nickname: nickname?.trim() ?? '',
+      phone: normalizedPhone || undefined,
       passwordHash,
       expiresAt,
       lastSentAt: now,

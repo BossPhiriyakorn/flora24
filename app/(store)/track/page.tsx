@@ -239,15 +239,19 @@ function OrderCard({ order, onConfirmReceived }: {
               className="overflow-hidden"
             >
               <div className="px-4 pb-4 space-y-2">
-                {order.items.map((item, i) => (
-                  <div key={i} className="flex justify-between text-sm">
-                    <span className="text-white/60">
-                      {item.productName}
-                      <span className="text-white/30"> ×{item.quantity}</span>
-                    </span>
-                    <span className="font-bold text-white/80">{formatPrice(item.price * item.quantity)} ฿</span>
-                  </div>
-                ))}
+                {order.items.map((item: any, i: number) => {
+                  const qty = item.quantity ?? item.qty ?? 1;
+                  const name = item.productName ?? item.name ?? '';
+                  return (
+                    <div key={i} className="flex justify-between text-sm">
+                      <span className="text-white/60">
+                        {name}
+                        <span className="text-white/30"> ×{qty}</span>
+                      </span>
+                      <span className="font-bold text-white/80">{formatPrice(item.price * qty)} ฿</span>
+                    </div>
+                  );
+                })}
                 <div className="pt-2 border-t border-white/10 flex justify-between text-sm font-bold text-white/90">
                   <span>รวม</span>
                   <span>{formatPrice(order.total)} ฿</span>

@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectDB, ObjectId } from '@/lib/mongodb';
 import { requireUser, isNextResponse } from '@/lib/api-helpers';
+import { createAdminNotification } from '@/lib/adminNotifications';
 
 /* ────────────────────────────────────────────────────────────
    PATCH /api/orders/[id]/confirm
-   ผู้ใช้กด "ได้รับสินค้าแล้ว" → orderStatus = 'delivered'
+   ผู้ใช้กด "ได้รับสินค้าแล้ว" → orderStatus = 'delivered' + แจ้งเตือนแอดมิน
 ──────────────────────────────────────────────────────────── */
 export async function PATCH(
   req: NextRequest,
@@ -39,6 +40,15 @@ export async function PATCH(
         },
       }
     );
+
+    await createAdminNotification(db, {
+      type:      'order_received',
+      title:     'ยืนยันรับสินค้าแล้ว',
+      body:      `${order.orderId} · ฿${Number(order.total || 0).toLocaleString('th-TH')}`,
+      actorName: order.customerName,
+      refType:   'order',
+      refId:     order.orderId,
+    });
 
     return NextResponse.json({ ok: true });
   } catch (err: any) {

@@ -1,1 +1,0 @@
-"use strict";exports.id=3280,exports.ids=[3280],exports.modules={93280:(a,b,c)=>{c.d(b,{createAdminNotification:()=>d});async function d(a,b){let c={type:b.type,title:b.title,body:b.body,actorName:b.actorName,refType:b.refType,refId:b.refId,read:!1,createdAt:new Date};await a.collection("admin_notifications").insertOne(c)}}};

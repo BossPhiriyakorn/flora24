@@ -19,6 +19,7 @@ import {
   Loader2,
   Bell,
   Settings,
+  CheckCircle2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -28,7 +29,7 @@ const stats = [
   { name: 'บทความทั้งหมด', value: '156', change: '-2.4%', icon: FileText, color: 'bg-amber-500' },
 ];
 
-type NotifType = 'new_order' | 'payment_pending' | 'order_cancelled' | 'admin_login' | 'new_article' | 'new_customer' | 'new_product' | 'new_product_category' | 'new_article_category' | 'settings_updated';
+type NotifType = 'new_order' | 'payment_pending' | 'order_cancelled' | 'order_received' | 'admin_login' | 'new_article' | 'new_customer' | 'new_product' | 'new_product_category' | 'new_article_category' | 'settings_updated';
 
 interface BestSellingItem {
   productId: string;
@@ -66,6 +67,7 @@ const ACTIVITY_ICON: Record<NotifType, React.ReactNode> = {
   new_order:            <ShoppingBag className="w-3.5 h-3.5" />,
   payment_pending:      <CreditCard   className="w-3.5 h-3.5" />,
   order_cancelled:      <XCircle      className="w-3.5 h-3.5" />,
+  order_received:       <CheckCircle2 className="w-3.5 h-3.5" />,
   admin_login:          <LogIn        className="w-3.5 h-3.5" />,
   new_article:          <FileTextIcon className="w-3.5 h-3.5" />,
   new_customer:         <Users        className="w-3.5 h-3.5" />,
@@ -79,6 +81,7 @@ const ACTIVITY_COLOR: Record<NotifType, string> = {
   new_order:            'bg-emerald-100 text-emerald-600',
   payment_pending:      'bg-amber-100 text-amber-600',
   order_cancelled:      'bg-red-100 text-red-600',
+  order_received:       'bg-teal-100 text-teal-600',
   admin_login:          'bg-blue-100 text-blue-600',
   new_article:          'bg-violet-100 text-violet-600',
   new_customer:         'bg-cyan-100 text-cyan-600',
@@ -238,7 +241,7 @@ export default function Dashboard() {
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-bold text-slate-900">กิจกรรมล่าสุด</h3>
             <Link
-              href="/admin"
+              href="/admin/settings?tab=notifications"
               className="text-xs font-bold text-emerald-600 hover:underline"
             >
               แจ้งเตือนทั้งหมด

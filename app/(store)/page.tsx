@@ -73,6 +73,7 @@ export default function FlowerStore() {
   const [isContactOpen, setIsContactOpen] = useState(false);
   const [categoryDropdownOpen, setCategoryDropdownOpen] = useState(false);
   const [productDetailProduct, setProductDetailProduct] = useState<any>(null);
+  const [addToCartQty, setAddToCartQty] = useState(1);
   const [contactInfo, setContactInfo] = useState({
     phone: '', email: '', lineId: '', facebook: '', tiktok: '',
   });
@@ -114,11 +115,17 @@ export default function FlowerStore() {
       });
   }, []);
 
-  // โหลด cart จาก localStorage + ข้อมูลจาก API เมื่อ mount
+  // โหลด cart จาก localStorage (รองรับของเก่าที่ไม่มี quantity = ถือเป็น 1)
   useEffect(() => {
     try {
       const saved = localStorage.getItem('flora_cart');
-      if (saved) setCart(JSON.parse(saved));
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        const normalized = Array.isArray(parsed)
+          ? parsed.map((item: any) => ({ ...item, quantity: Math.max(1, Number(item.quantity) || 1) }))
+          : [];
+        setCart(normalized);
+      }
     } catch { /* ignore */ }
     fetchStoreData();
   }, [fetchStoreData]);
@@ -180,14 +187,38 @@ export default function FlowerStore() {
     }
   };
 
-  const addToCart = (product: any) => {
+  const addToCart = (product: any, quantity: number = 1) => {
+    const qty = Math.max(1, Math.min(99, quantity));
     setCart(prev => {
-      const next = [...prev, product];
+      const existingIdx = prev.findIndex((item: any) => item.id === product.id);
+      let next: any[];
+      if (existingIdx >= 0) {
+        next = prev.map((item: any, i) =>
+          i === existingIdx
+            ? { ...item, quantity: Math.min(99, (item.quantity ?? 1) + qty) }
+            : item
+        );
+      } else {
+        next = [...prev, { ...product, quantity: qty }];
+      }
       localStorage.setItem('flora_cart', JSON.stringify(next));
       return next;
     });
-    setToast(`เพิ่ม "${product.name}" ลงในตะกร้าแล้ว`);
+    setToast(qty > 1 ? `เพิ่ม "${product.name}" ${qty} ชิ้นลงตะกร้าแล้ว` : `เพิ่ม "${product.name}" ลงในตะกร้าแล้ว`);
     setTimeout(() => setToast(null), 3000);
+  };
+
+  const updateCartQuantity = (index: number, newQty: number) => {
+    if (newQty < 1) {
+      removeFromCart(index);
+      return;
+    }
+    const qty = Math.min(99, newQty);
+    setCart(prev => {
+      const next = prev.map((item: any, i) => (i === index ? { ...item, quantity: qty } : item));
+      localStorage.setItem('flora_cart', JSON.stringify(next));
+      return next;
+    });
   };
 
   const removeFromCart = (index: number) => {
@@ -198,7 +229,8 @@ export default function FlowerStore() {
     });
   };
 
-  const cartTotal = cart.reduce((sum, item) => sum + item.price, 0);
+  const cartTotal = cart.reduce((sum, item) => sum + (item.price ?? 0) * (item.quantity ?? 1), 0);
+  const cartItemCount = cart.reduce((sum, item) => sum + (item.quantity ?? 1), 0);
 
   return (
     <div ref={containerRef} className="relative min-h-screen">
@@ -257,12 +289,35 @@ export default function FlowerStore() {
                 <h3 className="text-xl md:text-2xl font-bold text-white mb-1">{productDetailProduct.name}</h3>
                 <p className="text-[#E11D48] font-black text-lg md:text-xl mb-4">฿{productDetailProduct.price.toLocaleString()}</p>
                 {productDetailProduct.description && (
-                  <p className="text-white/70 text-sm leading-relaxed mb-6 whitespace-pre-line">{productDetailProduct.description}</p>
+                  <p className="text-white/70 text-sm leading-relaxed mb-4 whitespace-pre-line">{productDetailProduct.description}</p>
                 )}
+                <div className="flex items-center gap-4 mb-6">
+                  <span className="text-white/60 text-sm">จำนวน</span>
+                  <div className="flex items-center rounded-xl border border-white/20 overflow-hidden bg-white/5">
+                    <button
+                      type="button"
+                      onClick={() => setAddToCartQty(q => Math.max(1, q - 1))}
+                      className="w-10 h-10 flex items-center justify-center text-white/80 hover:bg-white/10 transition-colors"
+                      aria-label="ลดจำนวน"
+                    >
+                      −
+                    </button>
+                    <span className="w-12 text-center font-bold text-white tabular-nums">{addToCartQty}</span>
+                    <button
+                      type="button"
+                      onClick={() => setAddToCartQty(q => Math.min(99, (productDetailProduct.stock ?? 99), q + 1))}
+                      className="w-10 h-10 flex items-center justify-center text-white/80 hover:bg-white/10 transition-colors"
+                      aria-label="เพิ่มจำนวน"
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
                 <button
                   onClick={() => {
-                    addToCart(productDetailProduct);
+                    addToCart(productDetailProduct, addToCartQty);
                     setProductDetailProduct(null);
+                    setAddToCartQty(1);
                   }}
                   className="w-full py-4 rounded-xl bg-[#E11D48] hover:bg-[#c9183d] text-white font-black tracking-widest uppercase text-sm transition-colors flex items-center justify-center gap-2 active:scale-[0.98]"
                 >
@@ -327,28 +382,50 @@ export default function FlowerStore() {
                             </span>
                             <div className="h-px flex-1 bg-white/10" />
                           </div>
-                          {itemsInCat.map(({ item, idx }) => (
-                            <motion.div
-                              key={`${catName}-${idx}`}
-                              initial={{ opacity: 0, x: 20 }}
-                              animate={{ opacity: 1, x: 0 }}
-                              className="flex gap-4 p-4 bg-white/5 rounded-2xl border border-white/5 group"
-                            >
-                              <div className="relative w-20 h-20 rounded-xl overflow-hidden shrink-0">
-                                <Image src={item.image} alt={item.name} fill className="object-cover" referrerPolicy="no-referrer" />
-                              </div>
-                              <div className="flex-1">
-                                <h4 className="font-bold text-sm mb-1">{item.name}</h4>
-                                <p className="text-[#E11D48] font-black text-sm">฿{item.price.toLocaleString()}</p>
-                              </div>
-                              <button
-                                onClick={() => removeFromCart(idx)}
-                                className="p-2 text-white/20 hover:text-red-500 transition-colors"
+                          {itemsInCat.map(({ item, idx }) => {
+                            const qty = item.quantity ?? 1;
+                            return (
+                              <motion.div
+                                key={`${catName}-${idx}`}
+                                initial={{ opacity: 0, x: 20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                className="flex gap-4 p-4 bg-white/5 rounded-2xl border border-white/5 group"
                               >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            </motion.div>
-                          ))}
+                                <div className="relative w-20 h-20 rounded-xl overflow-hidden shrink-0">
+                                  <Image src={item.image} alt={item.name} fill className="object-cover" referrerPolicy="no-referrer" />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <h4 className="font-bold text-sm mb-1">{item.name}</h4>
+                                  <p className="text-white/50 text-xs mb-1">×{qty}</p>
+                                  <p className="text-[#E11D48] font-black text-sm">฿{(item.price * qty).toLocaleString()}</p>
+                                </div>
+                                <div className="flex flex-col items-center gap-0.5 shrink-0">
+                                  <div className="flex items-center rounded-lg border border-white/20 overflow-hidden bg-white/5">
+                                    <button
+                                      type="button"
+                                      onClick={() => updateCartQuantity(idx, qty - 1)}
+                                      className="w-7 h-7 flex items-center justify-center text-white/80 hover:bg-white/10 text-sm"
+                                      aria-label="ลด"
+                                    >−</button>
+                                    <span className="w-6 text-center text-xs font-bold tabular-nums">{qty}</span>
+                                    <button
+                                      type="button"
+                                      onClick={() => updateCartQuantity(idx, qty + 1)}
+                                      className="w-7 h-7 flex items-center justify-center text-white/80 hover:bg-white/10 text-sm"
+                                      aria-label="เพิ่ม"
+                                    >+</button>
+                                  </div>
+                                  <button
+                                    onClick={() => removeFromCart(idx)}
+                                    className="p-1.5 text-white/20 hover:text-red-500 transition-colors"
+                                    aria-label="ลบออก"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+                                </div>
+                              </motion.div>
+                            );
+                          })}
                         </div>
                       );
                     });
@@ -362,7 +439,7 @@ export default function FlowerStore() {
                   <span className="text-3xl font-black tracking-tighter">฿{cartTotal.toLocaleString()}</span>
                 </div>
                 <button
-                  disabled={cart.length === 0}
+                  disabled={cartItemCount === 0}
                   onClick={() => { setIsCartOpen(false); router.push('/checkout'); }}
                   className="w-full bg-[#E11D48] disabled:bg-white/10 disabled:text-white/20 text-white py-6 rounded-2xl font-black tracking-widest uppercase text-xs transition-all hover:scale-[1.02] active:scale-[0.98]"
                 >
@@ -375,7 +452,7 @@ export default function FlowerStore() {
       </AnimatePresence>
 
       {/* NAVBAR */}
-      <StoreNavbar cartCount={cart.length} onCartClick={() => setIsCartOpen(true)} />
+      <StoreNavbar cartCount={cartItemCount} onCartClick={() => setIsCartOpen(true)} />
 
       {/* HERO SECTION */}
       <section className="relative min-h-[60dvh] w-full flex items-center justify-center overflow-hidden pb-16">
@@ -498,7 +575,7 @@ export default function FlowerStore() {
                   </div>
 
                   <button 
-                    onClick={() => setProductDetailProduct(product)}
+                    onClick={() => { setProductDetailProduct(product); setAddToCartQty(1); }}
                     className="w-full bg-white/5 hover:bg-[#E11D48] border border-white/10 py-2.5 md:py-4 rounded-xl md:rounded-2xl font-black tracking-widest uppercase text-[9px] md:text-xs transition-all flex items-center justify-center gap-2 active:scale-95"
                   >
                     สั่งซื้อ

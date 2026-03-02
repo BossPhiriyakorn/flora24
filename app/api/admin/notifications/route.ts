@@ -17,11 +17,28 @@ export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const limit = Math.min(Number(searchParams.get('limit')) || DEFAULT_LIMIT, 100);
+    const dateFrom = searchParams.get('dateFrom'); // YYYY-MM-DD
+    const dateTo   = searchParams.get('dateTo');   // YYYY-MM-DD
 
     const db = await connectDB();
+    const filter: Record<string, unknown> = {};
+    if (dateFrom || dateTo) {
+      filter.createdAt = {};
+      if (dateFrom) {
+        const from = new Date(dateFrom);
+        from.setHours(0, 0, 0, 0);
+        (filter.createdAt as Record<string, Date>).$gte = from;
+      }
+      if (dateTo) {
+        const to = new Date(dateTo);
+        to.setHours(23, 59, 59, 999);
+        (filter.createdAt as Record<string, Date>).$lte = to;
+      }
+    }
+
     const list = await db
       .collection<AdminNotificationDoc>('admin_notifications')
-      .find({})
+      .find(filter)
       .sort({ createdAt: -1 })
       .limit(limit)
       .toArray();

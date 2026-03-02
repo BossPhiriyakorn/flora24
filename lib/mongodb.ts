@@ -107,6 +107,7 @@ export interface UserDoc {
   linePictureUrl?: string;
   provider: 'email' | 'line' | 'both';
   status: 'active' | 'suspended';
+  stripeCustomerId?: string;     // Stripe Customer ID (cus_xxx) — ใช้ผูกบัตรให้ใช้ซ้ำได้
   createdAt: Date;
   updatedAt?: Date;
 }
@@ -122,6 +123,7 @@ export interface PendingRegistrationDoc {
   firstName: string;
   lastName: string;
   nickname: string;
+  phone?: string;                // เบอร์โทร สูงสุด 10 หลัก
   passwordHash: string;
   expiresAt: Date;
   lastSentAt?: Date;             // สำหรับ cooldown
@@ -339,6 +341,7 @@ export type AdminNotificationType =
   | 'new_order'
   | 'payment_pending'
   | 'order_cancelled'
+  | 'order_received'   // ลูกค้ายืนยันรับสินค้าแล้ว
   | 'admin_login'
   | 'new_article'
   | 'new_customer'

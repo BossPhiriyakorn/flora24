@@ -1,14 +1,40 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
 
-coverage/
-.DS_Store
-*.log
-.env*
+# Build & output (สร้างใหม่ตอน deploy ได้)
+.next/
+out/
+build/
+dist/
+
+# Environment & secrets (ไม่เอาขึ้น Git)
+.env
+.env.*
 !.env.example
 Credentials.json
 
-# Root node_modules เท่านั้น (ไม่ต้องขึ้น Git)
-/node_modules/
+# Logs & debug
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 
-# Next.js build cache (ไม่จำเป็นสำหรับ deploy)
-.next/cache/
-.next/trace
+# Testing
+coverage/
+.nyc_output/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE / Editor
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Misc
+*.tsbuildinfo
+.turbo

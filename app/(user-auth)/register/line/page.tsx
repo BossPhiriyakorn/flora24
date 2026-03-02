@@ -4,7 +4,7 @@ import React, { useEffect, useState, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'motion/react';
-import { User, Mail, CheckCircle2, AlertCircle, Loader2, Flower2, Shield, X, FileText, ShieldCheck } from 'lucide-react';
+import { User, Mail, Phone, CheckCircle2, AlertCircle, Loader2, Flower2, Shield, X, FileText, ShieldCheck } from 'lucide-react';
 
 const TERMS_PLACEHOLDER = `ข้อกำหนดการใช้งาน
 
@@ -54,7 +54,7 @@ function RegisterLineContent() {
   const searchParams = useSearchParams();
   const tempToken    = searchParams.get('token') ?? '';
 
-  const [form, setForm]               = useState({ firstName:'', lastName:'', nickname:'', email:'' });
+  const [form, setForm]               = useState({ firstName:'', lastName:'', nickname:'', email:'', phone:'' });
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [privacyAccepted, setPrivacyAccepted] = useState(false);
   const [docModal, setDocModal]       = useState<DocModal>(null);
@@ -225,39 +225,67 @@ function RegisterLineContent() {
               <p className="text-white/20 font-mono text-[9px] mt-1">ใช้สำหรับรับการแจ้งเตือนคำสั่งซื้อ</p>
             </div>
 
-            {/* ข้อกำหนดและนโยบาย — แยกคนละรายการ ต้องอ่านและยอมรับทั้งสองก่อนสมัคร */}
+            <div>
+              <label className="block text-[10px] font-black uppercase tracking-widest text-white/40 mb-1.5">เบอร์โทรศัพท์ <span className="text-white/25">(ไม่บังคับ สูงสุด 10 หลัก)</span></label>
+              <div className="relative">
+                <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/25 pointer-events-none" />
+                <input
+                  type="tel"
+                  inputMode="numeric"
+                  maxLength={10}
+                  value={form.phone}
+                  onChange={e => {
+                    const v = e.target.value.replace(/\D/g, '').slice(0, 10);
+                    setForm(p => ({ ...p, phone: v }));
+                  }}
+                  placeholder="08xxxxxxxx"
+                  autoComplete="tel"
+                  className={`${inputCls()} pl-11`}
+                />
+              </div>
+            </div>
+
+            {/* ข้อกำหนดและนโยบาย — ช่องติ๊กถูก คลิกแล้วเด้งป๊อปอัพให้อ่านและยอมรับ */}
             <div className="space-y-3">
               <p className="text-[10px] font-bold uppercase tracking-widest text-white/40">กรุณาอ่านและยอมรับทั้งสองรายการก่อนสร้างบัญชี</p>
-              <div className="flex items-center gap-3">
-                {termsAccepted ? (
-                  <span className="flex items-center gap-2 text-xs text-white/70">
-                    <span className="w-5 h-5 rounded-md bg-[#06C755] border-2 border-[#06C755] flex items-center justify-center">
-                      <CheckCircle2 className="w-3 h-3 text-white" />
-                    </span>
-                    ข้อกำหนดการใช้งาน
-                  </span>
-                ) : (
-                  <button type="button" onClick={() => setDocModal('terms')} className="flex items-center gap-2 text-xs text-white/70 hover:text-[#06C755] transition-colors">
-                    <FileText className="w-4 h-4" />
-                    <span className="underline">อ่านข้อกำหนดการใช้งาน</span>
-                  </button>
-                )}
-              </div>
-              <div className="flex items-center gap-3">
-                {privacyAccepted ? (
-                  <span className="flex items-center gap-2 text-xs text-white/70">
-                    <span className="w-5 h-5 rounded-md bg-[#06C755] border-2 border-[#06C755] flex items-center justify-center">
-                      <CheckCircle2 className="w-3 h-3 text-white" />
-                    </span>
-                    นโยบายความเป็นส่วนตัว
-                  </span>
-                ) : (
-                  <button type="button" onClick={() => setDocModal('privacy')} className="flex items-center gap-2 text-xs text-white/70 hover:text-[#06C755] transition-colors">
-                    <ShieldCheck className="w-4 h-4" />
-                    <span className="underline">อ่านนโยบายความเป็นส่วนตัว</span>
-                  </button>
-                )}
-              </div>
+              {/* ข้อกำหนดการใช้งาน */}
+              <label
+                className="flex items-center gap-3 cursor-pointer group"
+                onClick={(e) => { e.preventDefault(); setDocModal('terms'); }}
+              >
+                <input
+                  type="checkbox"
+                  readOnly
+                  checked={termsAccepted}
+                  className="sr-only peer"
+                />
+                <span className={`w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 transition-colors group-hover:border-[#06C755]/60 ${termsAccepted ? 'bg-[#06C755] border-[#06C755]' : 'border-white/30'}`}>
+                  {termsAccepted && <CheckCircle2 className="w-3 h-3 text-white" />}
+                </span>
+                <span className="flex items-center gap-2 text-xs text-white/70 group-hover:text-[#06C755] transition-colors">
+                  <FileText className="w-4 h-4" />
+                  ข้อกำหนดการใช้งาน
+                </span>
+              </label>
+              {/* นโยบายความเป็นส่วนตัว */}
+              <label
+                className="flex items-center gap-3 cursor-pointer group"
+                onClick={(e) => { e.preventDefault(); setDocModal('privacy'); }}
+              >
+                <input
+                  type="checkbox"
+                  readOnly
+                  checked={privacyAccepted}
+                  className="sr-only peer"
+                />
+                <span className={`w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 transition-colors group-hover:border-[#06C755]/60 ${privacyAccepted ? 'bg-[#06C755] border-[#06C755]' : 'border-white/30'}`}>
+                  {privacyAccepted && <CheckCircle2 className="w-3 h-3 text-white" />}
+                </span>
+                <span className="flex items-center gap-2 text-xs text-white/70 group-hover:text-[#06C755] transition-colors">
+                  <ShieldCheck className="w-4 h-4" />
+                  นโยบายความเป็นส่วนตัว
+                </span>
+              </label>
               {errors.terms && <FieldError msg={errors.terms} />}
             </div>
 
