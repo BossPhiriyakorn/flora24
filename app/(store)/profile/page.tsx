@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   User, Mail, Phone, Camera, CreditCard,
   Plus, Trash2, CheckCircle, ShieldCheck, X, Loader2, AlertCircle,
@@ -224,14 +224,17 @@ function AddCardModal({ onClose, onSave }: { onClose: () => void; onSave: (c: Sa
   const [holder, setHolder] = useState('');
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
+  const [stripePromise, setStripePromise] = useState<ReturnType<typeof loadStripe> | null>(null);
 
-  const stripePromise = useMemo(
-    () =>
-      typeof window !== 'undefined' && process.env.NEXT_PUBLIC_PAYMENT_GATEWAY_PUBLIC_KEY
-        ? loadStripe(process.env.NEXT_PUBLIC_PAYMENT_GATEWAY_PUBLIC_KEY)
-        : null,
-    [],
-  );
+  useEffect(() => {
+    fetch('/api/payment/config')
+      .then(r => r.json())
+      .then((data: { publicKey?: string | null }) => {
+        const key = data?.publicKey?.trim();
+        if (key) setStripePromise(loadStripe(key));
+      })
+      .catch(() => {});
+  }, []);
 
   async function handleSuccess(
     paymentMethodId: string,
@@ -321,7 +324,7 @@ function AddCardModal({ onClose, onSave }: { onClose: () => void; onSave: (c: Sa
               <div>
                 <p className="font-bold text-amber-400 text-sm mb-1">Payment Gateway ยังไม่ได้ตั้งค่า</p>
                 <p className="text-white/40 text-xs font-mono leading-relaxed">
-                  ใส่ค่า <code className="text-[#E11D48]">NEXT_PUBLIC_PAYMENT_GATEWAY_PUBLIC_KEY</code> ใน .env.local เพื่อเปิดใช้งานฟอร์มบัตรเครดิต
+                  ใส่ค่า <code className="text-[#E11D48]">PAYMENT_GATEWAY_PUBLIC_KEY</code> ใน .env บนเซิร์ฟเวอร์เพื่อเปิดใช้งานฟอร์มบัตรเครดิต
                 </p>
               </div>
             </div>

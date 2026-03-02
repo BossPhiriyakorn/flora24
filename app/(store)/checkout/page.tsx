@@ -279,11 +279,6 @@ function SuccessModal({ method, paymentVerified, onClose }: { method: PayMethod;
   );
 }
 
-// loadStripe รองรับ SSR อยู่แล้ว — ไม่ต้อง typeof window check (ทำให้ hydration mismatch)
-const stripePromise = process.env.NEXT_PUBLIC_PAYMENT_GATEWAY_PUBLIC_KEY
-  ? loadStripe(process.env.NEXT_PUBLIC_PAYMENT_GATEWAY_PUBLIC_KEY)
-  : null;
-
 /* ─── MAIN PAGE ─── */
 function CheckoutContent() {
   const router = useRouter();
@@ -717,10 +712,31 @@ function CheckoutContent() {
 }
 
 export default function CheckoutPage() {
+  const [stripePromise, setStripePromise] = useState<ReturnType<typeof loadStripe> | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch('/api/payment/config')
+      .then(r => r.json())
+      .then((data: { publicKey?: string | null }) => {
+        const key = data?.publicKey?.trim();
+        if (key) setStripePromise(loadStripe(key));
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#0A0A0A] text-[#F5F5F5] pt-24 pb-20 flex items-center justify-center">
+        <p className="text-white/50 font-mono text-sm">กำลังโหลด...</p>
+      </div>
+    );
+  }
   if (!stripePromise) {
     return (
       <div className="min-h-screen bg-[#0A0A0A] text-[#F5F5F5] pt-24 pb-20 flex items-center justify-center">
-        <p className="text-white/50 font-mono text-sm">Payment Gateway ไม่ได้ตั้งค่า (NEXT_PUBLIC_PAYMENT_GATEWAY_PUBLIC_KEY)</p>
+        <p className="text-white/50 font-mono text-sm">Payment Gateway ไม่ได้ตั้งค่า (PAYMENT_GATEWAY_PUBLIC_KEY ใน .env)</p>
       </div>
     );
   }
