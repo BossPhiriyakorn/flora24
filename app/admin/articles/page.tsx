@@ -25,6 +25,15 @@ const CATEGORY_OPTIONS = [
   { value: 'ข่าวสารอสังหาฯ', label: 'ข่าวสารอสังหาฯ' },
 ];
 
+const STATUS_OPTIONS = [
+  { value: '', label: 'สถานะทั้งหมด' },
+  { value: 'draft', label: 'แบบร่าง (ไม่แสดงในแอป)' },
+  { value: 'published', label: 'เผยแพร่' },
+];
+
+/** Placeholder when article has no image or image URL fails (404 etc.) */
+const ROW_IMAGE_PLACEHOLDER = 'https://picsum.photos/id/40/112/112';
+
 function StatusBadge({ status }: { status: Article['status'] }) {
   return status === 'published'
     ? <span className="inline-block px-3 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700">เผยแพร่</span>
@@ -37,6 +46,7 @@ export default function ArticlesPage() {
   const [loading, setLoading]         = React.useState(true);
   const [searchKeyword, setSearch]    = React.useState('');
   const [categoryFilter, setCatFilter] = React.useState('');
+  const [statusFilter, setStatusFilter] = React.useState('');
   const [pageSize, setPageSize]        = React.useState(10);
   const [selectedIds, setSelectedIds]  = React.useState<Set<string>>(new Set());
   const { showToast } = useToast();
@@ -47,6 +57,7 @@ export default function ArticlesPage() {
       const params = new URLSearchParams({ limit: '200' });
       if (searchKeyword.trim()) params.set('search', searchKeyword.trim());
       if (categoryFilter) params.set('category', categoryFilter);
+      if (statusFilter) params.set('status', statusFilter);
       const res  = await fetch(`/api/admin/articles?${params}`);
       const data = await res.json();
       if (res.ok) { setArticles(data.articles ?? []); setTotal(data.total ?? 0); }
@@ -58,7 +69,7 @@ export default function ArticlesPage() {
     }
   }
 
-  React.useEffect(() => { fetchArticles(); }, [searchKeyword, categoryFilter]);
+  React.useEffect(() => { fetchArticles(); }, [searchKeyword, categoryFilter, statusFilter]);
 
   async function handleDelete(id: string, title: string) {
     if (!confirm(`ต้องการลบบทความ "${title}" หรือไม่?`)) return;
@@ -126,6 +137,12 @@ export default function ArticlesPage() {
               <option key={opt.value || 'all'} value={opt.value}>{opt.label}</option>
             ))}
           </select>
+          <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}
+            className="px-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 bg-white min-w-[180px]">
+            {STATUS_OPTIONS.map(opt => (
+              <option key={opt.value || 'all'} value={opt.value}>{opt.label}</option>
+            ))}
+          </select>
         </div>
       </div>
 
@@ -186,9 +203,17 @@ export default function ArticlesPage() {
                       <div className="w-14 h-14 rounded-lg overflow-hidden bg-slate-100 shrink-0">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
-                          src={article.featuredImageUrl || `https://picsum.photos/id/${index + 40}/112/112`}
-                          alt="" width={56} height={56} className="w-full h-full object-cover"
-                          referrerPolicy="no-referrer" loading="lazy" decoding="async"
+                          src={article.featuredImageUrl || ROW_IMAGE_PLACEHOLDER}
+                          alt=""
+                          width={56}
+                          height={56}
+                          className="w-full h-full object-cover"
+                          referrerPolicy="no-referrer"
+                          loading="lazy"
+                          decoding="async"
+                          onError={(e) => {
+                            e.currentTarget.src = ROW_IMAGE_PLACEHOLDER;
+                          }}
                         />
                       </div>
                     </td>

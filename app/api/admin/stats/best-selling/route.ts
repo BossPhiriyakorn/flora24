@@ -50,19 +50,21 @@ export async function GET(req: NextRequest) {
       .sort((a, b) => b.totalQty - a.totalQty)
       .slice(0, TOP);
 
-    // ดึงรูปจาก products ถ้ายังไม่มี imageUrl
+    // ดึงชื่อและรูปจาก products ถ้ามี productId (ใช้ชื่อเมื่อ order item ไม่มี name)
     const validIds = list.map((x) => x.productId).filter((id) => id && ObjectId.isValid(id)) as string[];
     if (validIds.length > 0) {
       const products = await db
         .collection('products')
         .find({ _id: { $in: validIds.map((id) => new ObjectId(id)) } })
-        .project({ _id: 1, imageUrl: 1 })
+        .project({ _id: 1, name: 1, imageUrl: 1 })
         .toArray();
-      const imgById = new Map(products.map((p) => [p._id.toString(), p.imageUrl]));
-      list = list.map((row) => ({
-        ...row,
-        imageUrl: row.imageUrl ?? (row.productId ? imgById.get(row.productId) : undefined),
-      }));
+      const productById = new Map(products.map((p) => [p._id.toString(), p]));
+      list = list.map((row) => {
+        const prod = row.productId ? productById.get(row.productId) : undefined;
+        const name = (row.name && row.name !== 'ไม่ระบุชื่อ') ? row.name : (prod?.name ?? row.name ?? 'ไม่ระบุชื่อ');
+        const imageUrl = row.imageUrl ?? (prod?.imageUrl);
+        return { ...row, name, imageUrl };
+      });
     }
 
     const items = list.map(({ key, name, totalQty, imageUrl, productId }) => ({

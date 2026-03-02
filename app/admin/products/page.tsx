@@ -23,6 +23,9 @@ interface Product {
 
 type ModalMode = 'add' | 'edit';
 
+/** Placeholder when product has no image or image URL fails to load */
+const ROW_IMAGE_PLACEHOLDER = 'https://picsum.photos/id/40/112/112';
+
 // ─── Product Modal ─────────────────────────────────────────────
 function ProductModal({
   mode,
@@ -457,7 +460,15 @@ export default function ProductsPage() {
                     <td className="px-4 py-3">
                       <div className="w-14 h-14 rounded-lg overflow-hidden bg-slate-100 shrink-0 border border-slate-200">
                         {product.imageUrl ? (
-                          <img src={getDriveImageDisplayUrl(product.imageUrl)} alt={product.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                          <img
+                            src={getDriveImageDisplayUrl(product.imageUrl)}
+                            alt={product.name}
+                            className="w-full h-full object-cover"
+                            referrerPolicy="no-referrer"
+                            onError={(e) => {
+                              e.currentTarget.src = ROW_IMAGE_PLACEHOLDER;
+                            }}
+                          />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center">
                             <ImageIcon className="w-6 h-6 text-slate-300" />

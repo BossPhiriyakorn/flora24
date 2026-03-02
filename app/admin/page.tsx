@@ -22,6 +22,7 @@ import {
   CheckCircle2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { getDriveImageDisplayUrl } from '@/lib/driveImageUrl';
 
 const stats = [
   { name: 'ผู้เข้าชมวันนี้', value: '1,284', change: '+12.5%', icon: Users, color: 'bg-blue-500' },
@@ -219,7 +220,7 @@ export default function Dashboard() {
                   </span>
                   <div className="w-12 h-12 rounded-lg overflow-hidden bg-slate-100 shrink-0 relative">
                     <Image
-                      src={item.imageUrl || FALLBACK_IMAGE}
+                      src={item.imageUrl ? getDriveImageDisplayUrl(item.imageUrl, 96) : FALLBACK_IMAGE}
                       alt=""
                       fill
                       className="object-cover"

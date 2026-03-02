@@ -14,7 +14,6 @@ import {
   FileEdit,
 } from 'lucide-react';
 import { useToast } from '@/components/Toast';
-import { convertImageFileToWebP } from '@/lib/convertToWebp';
 import { SeoScoreCard } from '@/components/SeoScoreCard';
 import { GooglePreviewCard } from '@/components/GooglePreviewCard';
 import { RichTextEditor } from '@/components/RichTextEditor';
@@ -26,38 +25,26 @@ export default function NewArticlePage() {
   const [categoriesLoading, setCategoriesLoading] = React.useState(true);
   const [status, setStatus] = React.useState<'published' | 'draft'>('draft');
   const [featuredPreview, setFeaturedPreview] = React.useState<string | null>(null);
-  const [featuredWebpFile, setFeaturedWebpFile] = React.useState<File | null>(null);
-  const [isConverting, setIsConverting] = React.useState(false);
+  const [featuredFile, setFeaturedFile] = React.useState<File | null>(null);
   const [title, setTitle] = React.useState('');
   const [shortDescription, setShortDescription] = React.useState('');
   const [longDescription, setLongDescription] = React.useState('');
   const [seoKeyword, setSeoKeyword] = React.useState('');
 
-  const handleFeaturedChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFeaturedChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     setFeaturedPreview((prev) => {
       if (prev) URL.revokeObjectURL(prev);
       return null;
     });
-    setFeaturedWebpFile(null);
+    setFeaturedFile(null);
     if (!file) return;
     if (!file.type.startsWith('image/')) {
       showToast('กรุณาเลือกไฟล์ภาพเท่านั้น', 'error');
       return;
     }
-    setIsConverting(true);
-    try {
-      const webpFile = await convertImageFileToWebP(file);
-      setFeaturedWebpFile(webpFile);
-      setFeaturedPreview(URL.createObjectURL(webpFile));
-      showToast('แปลงรูปเป็น WebP แล้ว');
-    } catch {
-      setFeaturedPreview(URL.createObjectURL(file));
-      setFeaturedWebpFile(file);
-      showToast('ใช้ไฟล์ต้นฉบับ (แปลง WebP ไม่สำเร็จ)', 'error');
-    } finally {
-      setIsConverting(false);
-    }
+    setFeaturedFile(file);
+    setFeaturedPreview(URL.createObjectURL(file));
   };
 
   const seoInput = React.useMemo(
@@ -120,11 +107,11 @@ export default function NewArticlePage() {
       if (!res.ok) { showToast(data.error ?? 'บันทึกล้มเหลว', 'error'); return; }
       articleId = data.id?.toString?.() ?? data.id;
 
-      if (featuredWebpFile && articleId) {
+      if (featuredFile && articleId) {
         let imageOk = false;
         try {
           const fd = new FormData();
-          fd.append('file', featuredWebpFile);
+          fd.append('file', featuredFile);
           const upRes = await fetch(`/api/admin/upload/article/${articleId}`, { method: 'POST', body: fd });
           const upData = await upRes.json().catch(() => ({ error: 'อัปโหลดรูปไม่สำเร็จ' }));
           if (!upRes.ok) {
@@ -158,7 +145,7 @@ export default function NewArticlePage() {
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'เกิดข้อผิดพลาด';
       showToast(msg, 'error');
-      if (articleId && featuredWebpFile) {
+      if (articleId && featuredFile) {
         try { await fetch(`/api/admin/articles/${articleId}`, { method: 'DELETE' }); } catch { /* ignore */ }
       }
     } finally {
@@ -283,11 +270,10 @@ export default function NewArticlePage() {
               </label>
               <span className="text-sm text-slate-400">ยังไม่ได้เลือกไฟล์</span>
             </div>
-            <p className="text-xs text-slate-500 mt-1">กรุณาเลือกรูปภาพ (740px X 440px) — จะถูกแปลงเป็น WebP อัตโนมัติ</p>
-            {isConverting && <p className="text-sm text-amber-600 mt-1">กำลังแปลงเป็น WebP...</p>}
+            <p className="text-xs text-slate-500 mt-1">กรุณาเลือกรูปภาพ (740px X 440px) — จะถูกแปลงเป็น WebP ตอนกดบันทึก</p>
             {featuredPreview && (
               <div className="mt-3 space-y-1">
-                <span className="text-xs font-medium text-emerald-600">แปลงเป็น WebP แล้ว</span>
+                <span className="text-xs font-medium text-slate-600">รูปที่เลือก</span>
                 <div className="rounded-xl overflow-hidden border border-slate-200 w-full max-w-[222px]">
                   <img src={featuredPreview} alt="Preview" className="w-full h-auto object-cover" />
                 </div>
