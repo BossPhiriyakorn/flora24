@@ -18,7 +18,7 @@ function getCartCountFromStorage(): number {
     const raw = localStorage.getItem(CART_STORAGE_KEY);
     if (!raw) return 0;
     const arr = JSON.parse(raw);
-    return Array.isArray(arr) ? arr.length : 0;
+    return Array.isArray(arr) ? arr.reduce((s, i: any) => s + (Number(i?.quantity) || 1), 0) : 0;
   } catch {
     return 0;
   }
@@ -34,23 +34,35 @@ export default function StoreNavbar({ cartCount, onCartClick }: Props) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [localCartCount, setLocalCartCount] = useState(0);
+  const [serverCartCount, setServerCartCount] = useState(0);
   const pathname = usePathname();
   const router   = useRouter();
   const isHome   = pathname === '/';
 
-  // หน้าแรกส่ง cartCount มาจาก state; หน้าอื่นให้อ่านจาก localStorage เพื่อให้ตัวเลขตรงกัน
   useEffect(() => {
     setLocalCartCount(getCartCountFromStorage());
   }, [pathname]);
 
-  const displayCartCount = cartCount !== undefined && cartCount !== null ? cartCount : localCartCount;
-
-  // ตรวจสอบ login state จาก API (ใช้ cookie httpOnly จึงต้องถามผ่าน server)
+  // ตรวจสอบ login และโหลดจำนวนตะกร้าจาก API เมื่อ login (sync ข้ามอุปกรณ์)
   useEffect(() => {
-    fetch('/api/auth/me').then(r => {
-      setIsLoggedIn(r.ok);
-    }).catch(() => setIsLoggedIn(false));
+    fetch('/api/auth/me')
+      .then(r => {
+        setIsLoggedIn(r.ok);
+        if (r.ok) {
+          return fetch('/api/cart').then(res => res.json()).then((data: { items?: any[] }) => {
+            const items = Array.isArray(data?.items) ? data.items : [];
+            setServerCartCount(items.reduce((s, i: any) => s + (Number(i?.quantity) || 1), 0));
+          });
+        }
+        setServerCartCount(0);
+      })
+      .catch(() => { setIsLoggedIn(false); setServerCartCount(0); });
   }, [pathname]);
+
+  const displayCartCount =
+    cartCount !== undefined && cartCount !== null ? cartCount
+    : isLoggedIn ? serverCartCount
+    : localCartCount;
 
   async function handleLogout() {
     await fetch('/api/auth/logout', { method: 'POST' });

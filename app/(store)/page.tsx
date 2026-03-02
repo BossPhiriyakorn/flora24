@@ -68,6 +68,7 @@ export default function FlowerStore() {
   const [cart, setCart] = useState<any[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   const [isContactOpen, setIsContactOpen] = useState(false);
   const [categoryDropdownOpen, setCategoryDropdownOpen] = useState(false);
@@ -114,18 +115,58 @@ export default function FlowerStore() {
       });
   }, []);
 
-  // โหลด cart จาก localStorage (รองรับของเก่าที่ไม่มี quantity = ถือเป็น 1)
+  // โหลด cart: ถ้า login ใช้ API (sync ข้ามอุปกรณ์); ไม่ login ใช้ localStorage
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem('flora_cart');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        const normalized = Array.isArray(parsed)
-          ? parsed.map((item: any) => ({ ...item, quantity: Math.max(1, Number(item.quantity) || 1) }))
-          : [];
-        setCart(normalized);
-      }
-    } catch { /* ignore */ }
+    fetch('/api/auth/me')
+      .then(r => {
+        setIsLoggedIn(r.ok);
+        if (r.ok) {
+          return fetch('/api/cart').then(res => res.json()).then((data: { items?: any[] }) => {
+            const serverItems = Array.isArray(data?.items) ? data.items : [];
+            if (serverItems.length > 0) {
+              setCart(serverItems);
+              try { localStorage.setItem('flora_cart', JSON.stringify(serverItems)); } catch { /* ignore */ }
+              return;
+            }
+            try {
+              const saved = localStorage.getItem('flora_cart');
+              if (saved) {
+                const parsed = JSON.parse(saved);
+                const merged = Array.isArray(parsed)
+                  ? parsed.map((item: any) => ({ ...item, quantity: Math.max(1, Number(item.quantity) || 1) }))
+                  : [];
+                if (merged.length > 0) {
+                  fetch('/api/cart', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ items: merged }) }).catch(() => {});
+                  setCart(merged);
+                  localStorage.removeItem('flora_cart');
+                }
+              }
+            } catch { /* ignore */ }
+          });
+        }
+        try {
+          const saved = localStorage.getItem('flora_cart');
+          if (saved) {
+            const parsed = JSON.parse(saved);
+            const normalized = Array.isArray(parsed)
+              ? parsed.map((item: any) => ({ ...item, quantity: Math.max(1, Number(item.quantity) || 1) }))
+              : [];
+            setCart(normalized);
+          }
+        } catch { /* ignore */ }
+      })
+      .catch(() => {
+        try {
+          const saved = localStorage.getItem('flora_cart');
+          if (saved) {
+            const parsed = JSON.parse(saved);
+            const normalized = Array.isArray(parsed)
+              ? parsed.map((item: any) => ({ ...item, quantity: Math.max(1, Number(item.quantity) || 1) }))
+              : [];
+            setCart(normalized);
+          }
+        } catch { /* ignore */ }
+      });
     fetchStoreData();
   }, [fetchStoreData]);
 
@@ -190,17 +231,14 @@ export default function FlowerStore() {
     const qty = Math.max(1, Math.min(99, quantity));
     setCart(prev => {
       const existingIdx = prev.findIndex((item: any) => item.id === product.id);
-      let next: any[];
-      if (existingIdx >= 0) {
-        next = prev.map((item: any, i) =>
-          i === existingIdx
-            ? { ...item, quantity: Math.min(99, (item.quantity ?? 1) + qty) }
-            : item
-        );
-      } else {
-        next = [...prev, { ...product, quantity: qty }];
-      }
+      const next =
+        existingIdx >= 0
+          ? prev.map((item: any, i) =>
+              i === existingIdx ? { ...item, quantity: Math.min(99, (item.quantity ?? 1) + qty) } : item
+            )
+          : [...prev, { ...product, quantity: qty }];
       localStorage.setItem('flora_cart', JSON.stringify(next));
+      fetch('/api/cart', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ items: next }) }).catch(() => {});
       return next;
     });
     setToast(qty > 1 ? `เพิ่ม "${product.name}" ${qty} ชิ้นลงตะกร้าแล้ว` : `เพิ่ม "${product.name}" ลงในตะกร้าแล้ว`);
@@ -216,6 +254,7 @@ export default function FlowerStore() {
     setCart(prev => {
       const next = prev.map((item: any, i) => (i === index ? { ...item, quantity: qty } : item));
       localStorage.setItem('flora_cart', JSON.stringify(next));
+      fetch('/api/cart', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ items: next }) }).catch(() => {});
       return next;
     });
   };
@@ -224,6 +263,7 @@ export default function FlowerStore() {
     setCart(prev => {
       const next = prev.filter((_, i) => i !== index);
       localStorage.setItem('flora_cart', JSON.stringify(next));
+      fetch('/api/cart', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ items: next }) }).catch(() => {});
       return next;
     });
   };

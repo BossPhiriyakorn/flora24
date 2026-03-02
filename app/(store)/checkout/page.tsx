@@ -301,15 +301,33 @@ function CheckoutContent() {
   const [customerName, setCustomerName] = useState('');
 
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem('flora_cart');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        const list = Array.isArray(parsed) ? parsed : [];
-        const normalized = list.map((item: any) => ({ ...item, quantity: Math.max(1, Number(item.quantity) || 1) }));
-        setCart(normalized);
-      }
-    } catch { /* ignore */ }
+    fetch('/api/auth/me')
+      .then(r => {
+        if (r.ok) {
+          return fetch('/api/cart').then(res => res.json()).then((data: { items?: any[] }) => {
+            const list = Array.isArray(data?.items) ? data.items : [];
+            setCart(list.map((item: any) => ({ ...item, quantity: Math.max(1, Number(item.quantity) || 1) })));
+          });
+        }
+        try {
+          const saved = localStorage.getItem('flora_cart');
+          if (saved) {
+            const parsed = JSON.parse(saved);
+            const list = Array.isArray(parsed) ? parsed : [];
+            setCart(list.map((item: any) => ({ ...item, quantity: Math.max(1, Number(item.quantity) || 1) })));
+          }
+        } catch { /* ignore */ }
+      })
+      .catch(() => {
+        try {
+          const saved = localStorage.getItem('flora_cart');
+          if (saved) {
+            const parsed = JSON.parse(saved);
+            const list = Array.isArray(parsed) ? parsed : [];
+            setCart(list.map((item: any) => ({ ...item, quantity: Math.max(1, Number(item.quantity) || 1) })));
+          }
+        } catch { /* ignore */ }
+      });
     // โหลด user info สำหรับ Stripe billing_details
     fetch('/api/auth/me')
       .then(r => r.json())
@@ -344,6 +362,7 @@ function CheckoutContent() {
     const next = cart.filter((_, i) => i !== index);
     setCart(next);
     localStorage.setItem('flora_cart', JSON.stringify(next));
+    fetch('/api/cart', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ items: next }) }).catch(() => {});
   }
 
   function validate() {
@@ -454,6 +473,7 @@ function CheckoutContent() {
 
   function handleSuccessClose() {
     localStorage.removeItem('flora_cart');
+    fetch('/api/cart', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ items: [] }) }).catch(() => {});
     router.push('/track');
   }
 
