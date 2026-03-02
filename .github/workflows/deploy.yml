@@ -51,6 +51,7 @@ jobs:
       - name: Deploy to EC2
         run: |
           rsync -avz --delete \
+            --filter='P .env' --filter='P Credentials.json' \
             -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no" \
             .next/standalone/ \
             ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:${{ env.DEPLOY_PATH }}/standalone/
