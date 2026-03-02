@@ -2,6 +2,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Clock, Tag, ArrowLeft } from 'lucide-react';
+import { getDriveImageDisplayUrl } from '@/lib/driveImageUrl';
 
 const BASE = process.env.NEXT_PUBLIC_BASE_URL ?? 'http://localhost:3000';
 
@@ -69,7 +70,7 @@ export default async function ArticleDetailPage({ params }: { params: Promise<{ 
         {article.featuredImageUrl && (
           <div className="relative w-full aspect-[4/3] rounded-2xl overflow-hidden mb-8">
             <Image
-              src={article.featuredImageUrl}
+              src={getDriveImageDisplayUrl(article.featuredImageUrl, 1200)}
               alt={article.title}
               fill
               priority
@@ -124,7 +125,7 @@ export default async function ArticleDetailPage({ params }: { params: Promise<{ 
                   className="group bg-white/[0.04] border border-white/8 rounded-xl overflow-hidden hover:border-white/15 transition-all">
                   {r.featuredImageUrl && (
                     <div className="relative w-full aspect-[4/3] overflow-hidden">
-                      <Image src={r.featuredImageUrl} alt={r.title} fill className="object-cover transition-transform duration-500 group-hover:scale-105" />
+                      <Image src={getDriveImageDisplayUrl(r.featuredImageUrl, 400)} alt={r.title} fill className="object-cover transition-transform duration-500 group-hover:scale-105" referrerPolicy="no-referrer" />
                     </div>
                   )}
                   <div className="p-3">

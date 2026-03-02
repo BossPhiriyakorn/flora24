@@ -52,12 +52,14 @@ function mapProduct(p: any) {
 function mapArticle(a: any) {
   const raw = a.date || (a.createdAt ? new Date(a.createdAt).toISOString().slice(0, 10) : '');
   const dateStr = raw ? (() => { const d = new Date(raw); return isNaN(d.getTime()) ? raw : d.toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' }); })() : '';
+  const imageUrl = a.featuredImageUrl ? getDriveImageDisplayUrl(a.featuredImageUrl, 800) : '';
   return {
     id: a._id,
-    image: a.featuredImageUrl || articleFallbackImage,
+    image: imageUrl || articleFallbackImage,
     category: a.category ?? '',
     date: dateStr,
     title: a.title ?? '',
+    shortDescription: a.shortDescription ?? '',
   };
 }
 
@@ -525,7 +527,7 @@ export default function FlowerStore() {
       <section id="catalog" className="py-10 md:py-16 px-6 md:px-20 bg-[#0A0A0A]">
         <div className="max-w-7xl mx-auto">
           <div className={`reveal flex flex-row items-center justify-between mb-8 gap-4 ${categoryDropdownOpen ? 'relative z-[100]' : ''}`}>
-            <h2 className="text-5xl md:text-7xl font-black tracking-tighter">CATALOG</h2>
+            <h2 className="text-[2.7rem] md:text-[4.05rem] font-black tracking-tighter">CATALOG</h2>
 
             {/* CATEGORY DROPDOWN — ธีมเข้ากับแอป (พื้นเข้ม + สีแดง) */}
             <div className="relative shrink-0">
@@ -533,10 +535,10 @@ export default function FlowerStore() {
                 type="button"
                 onClick={() => setCategoryDropdownOpen((o) => !o)}
                 onBlur={() => setTimeout(() => setCategoryDropdownOpen(false), 150)}
-                className="flex items-center gap-2 bg-[#0A0A0A] border border-white/10 text-white text-[11px] font-black tracking-widest uppercase px-5 py-3 pr-10 rounded-full cursor-pointer hover:border-white/20 focus:outline-none focus:border-[#E11D48] transition-colors min-w-[140px] justify-center"
+                className="relative flex items-center bg-[#0A0A0A] border border-white/10 text-white text-[11px] font-black tracking-widest uppercase pl-5 pr-10 py-3 rounded-full cursor-pointer hover:border-white/20 focus:outline-none focus:border-[#E11D48] transition-colors min-w-[140px]"
               >
-                <span className="truncate">{activeTab === 'all' ? 'ทั้งหมด' : activeTab}</span>
-                <svg className={`w-4 h-4 text-white/60 shrink-0 transition-transform ${categoryDropdownOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <span className="flex-1 truncate text-center">{activeTab === 'all' ? 'ทั้งหมด' : activeTab}</span>
+                <svg className={`absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/60 shrink-0 transition-transform ${categoryDropdownOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                 </svg>
               </button>
@@ -705,6 +707,11 @@ export default function FlowerStore() {
                   <h3 className="text-xs md:text-sm font-bold leading-tight group-hover:text-[#E11D48] transition-colors line-clamp-2">
                     {article.title}
                   </h3>
+                  {article.shortDescription && (
+                    <p className="text-[10px] md:text-xs text-white/50 mt-1 line-clamp-2">
+                      {article.shortDescription}
+                    </p>
+                  )}
                 </motion.div>
               </Link>
             ))}

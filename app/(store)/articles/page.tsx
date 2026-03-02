@@ -5,6 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'motion/react';
 import { Loader2 } from 'lucide-react';
+import { getDriveImageDisplayUrl } from '@/lib/driveImageUrl';
 
 interface Article {
   _id: string;
@@ -91,7 +92,7 @@ export default function ArticlesPage() {
                   >
                     <div className="relative w-full aspect-[4/3] overflow-hidden">
                       <Image
-                        src={article.featuredImageUrl || FALLBACK_IMAGE}
+                        src={article.featuredImageUrl ? getDriveImageDisplayUrl(article.featuredImageUrl, 800) : FALLBACK_IMAGE}
                         alt={article.title}
                         fill
                         className="object-cover transition-transform duration-500 group-hover:scale-105"
@@ -106,9 +107,14 @@ export default function ArticlesPage() {
                         </span>
                         <span className="text-white/30 font-mono text-[9px] md:text-[10px]">{formatDate(article.date)}</span>
                       </div>
-                      <h2 className="text-xs md:text-sm font-bold leading-snug group-hover:text-[#E11D48] transition-colors line-clamp-3 mb-3 flex-1">
+                      <h2 className="text-xs md:text-sm font-bold leading-snug group-hover:text-[#E11D48] transition-colors line-clamp-3">
                         {article.title}
                       </h2>
+                      {article.shortDescription && (
+                        <p className="text-[10px] md:text-xs text-white/50 mt-1 mb-3 line-clamp-2 flex-1">
+                          {article.shortDescription}
+                        </p>
+                      )}
                       <div className="w-full mt-auto bg-[#E11D48]/10 group-hover:bg-[#E11D48] border border-[#E11D48]/30 group-hover:border-[#E11D48] text-[#E11D48] group-hover:text-white text-[10px] md:text-xs font-black tracking-widest uppercase py-2 md:py-2.5 rounded-xl transition-all duration-300 text-center">
                         อ่านเพิ่มเติม
                       </div>
