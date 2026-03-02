@@ -6,6 +6,10 @@ const nextConfig: NextConfig = {
   typescript: { ignoreBuildErrors: false },
   serverExternalPackages: ['mongodb', 'bcryptjs'],
   outputFileTracingRoot: __dirname,
+  // ขนาด body สูงสุดสำหรับ request (อัปโหลดรูป) — ตั้ง 5GB เพื่อให้อัปและแปลงรูปได้; ถ้า 413 ยังเกิด ให้ตั้ง Nginx client_max_body_size 5G (ดู .github/DEPLOY_SETUP.md)
+  experimental: {
+    serverActions: { bodySizeLimit: '5gb' },
+  },
   // รองรับการเข้าผ่าน tunnel (Cloudflare ฯลฯ) — ใส่ NEXT_PUBLIC_APP_URL หรือ NEXT_PUBLIC_ALLOWED_ORIGINS ให้ตรงกับ URL tunnel ปัจจุบัน แล้ว restart dev server (เปลี่ยน tunnel = แก้ .env แล้ว restart)
   // Next.js ต้องการ hostname เท่านั้น (ไม่มี https://) หรือ full origin ก็ได้ — ใส่ทั้ง 2 รูปแบบเพื่อความแน่ใจ
   allowedDevOrigins: (() => {
