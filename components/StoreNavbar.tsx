@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'motion/react';
 import {
-  ShoppingBag, Heart, X, Menu, UserCircle, BookOpen, Home, Package, LogIn, LogOut,
+  ShoppingBag, X, Menu, UserCircle, BookOpen, Home, Package, LogIn, LogOut,
 } from 'lucide-react';
 
 const BRAND_NAME = 'FLORA 24/7 EXPRESS';
@@ -125,10 +125,6 @@ export default function StoreNavbar({ cartCount, onCartClick }: Props) {
 
           {/* RIGHT ACTIONS */}
           <div className="flex items-center gap-2 md:gap-4">
-            <button className="relative p-2 text-white/70 hover:text-white transition-colors">
-              <Heart className="w-4 h-4 md:w-5 md:h-5" />
-              <span className="absolute top-0 right-0 w-1.5 h-1.5 md:w-2 md:h-2 bg-[#E11D48] rounded-full" />
-            </button>
             <button
               onClick={onCartClick ?? (() => router.push('/?openCart=1'))}
               className="bg-white text-black px-4 md:px-6 py-2 md:py-2.5 rounded-full text-[10px] font-black tracking-widest uppercase hover:bg-[#E11D48] hover:text-white transition-all"

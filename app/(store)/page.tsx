@@ -9,7 +9,6 @@ import {
   Truck, 
   Clock, 
   ShieldCheck, 
-  Star, 
   Heart, 
   ChevronRight, 
   ArrowRight,
@@ -482,11 +481,6 @@ export default function FlowerStore() {
         </div>
       </section>
 
-      {/* REAL-TIME DISPATCH FEED */}
-      <div className="fixed bottom-8 left-8 z-[90] hidden lg:block">
-        <DispatchFeed />
-      </div>
-
       {/* CATALOG */}
       <section id="catalog" className="py-10 md:py-16 px-6 md:px-20 bg-[#0A0A0A]">
         <div className="max-w-7xl mx-auto">
@@ -701,44 +695,8 @@ export default function FlowerStore() {
               </button>
             </div>
 
-            <div className="grid grid-cols-2 gap-10">
-              <div>
-                <h4 className="font-bold mb-8 tracking-widest uppercase text-xs text-white/40">Quick Links</h4>
-                <ul className="space-y-4 text-sm font-medium">
-                  <li><button onClick={() => scrollToCatalog('wreaths')} className="hover:text-[#E11D48] transition-colors">พวงหรีด (Wreaths)</button></li>
-                  <li><button onClick={() => scrollToCatalog('bouquets')} className="hover:text-[#E11D48] transition-colors">ช่อดอกไม้ (Bouquets)</button></li>
-                  <li><button onClick={() => scrollToCatalog('worship')} className="hover:text-[#E11D48] transition-colors">ดอกไม้ไหว้พระ (Worship)</button></li>
-                  <li><a href="#" className="hover:text-[#E11D48] transition-colors">พื้นที่ให้บริการ</a></li>
-                </ul>
-              </div>
-              <div>
-                <h4 className="font-bold mb-8 tracking-widest uppercase text-xs text-white/40">Trust Signals</h4>
-                <div className="space-y-6">
-                  <div className="flex items-center gap-3">
-                    <CheckCircle2 className="w-5 h-5 text-green-500" />
-                    <span className="text-xs font-bold uppercase tracking-widest">SSL Secure Payment</span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <Star className="w-5 h-5 text-yellow-500 fill-yellow-500" />
-                    <span className="text-xs font-bold uppercase tracking-widest">4.9/5 Customer Rating</span>
-                  </div>
-                  <div className="flex gap-4 opacity-40">
-                    <div className="w-10 h-6 bg-white/20 rounded-sm" />
-                    <div className="w-10 h-6 bg-white/20 rounded-sm" />
-                    <div className="w-10 h-6 bg-white/20 rounded-sm" />
-                  </div>
-                </div>
-              </div>
-            </div>
           </div>
 
-          <div className="pt-12 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-8">
-            <p className="text-[10px] font-mono text-white/20 uppercase tracking-[0.3em]">© 2024 {BRAND_NAME}. ALL RIGHTS RESERVED.</p>
-            <div className="flex items-center gap-3">
-              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-              <span className="text-[10px] font-mono text-white/40 uppercase tracking-widest">System Status: Operational</span>
-            </div>
-          </div>
         </div>
       </footer>
 
@@ -873,53 +831,6 @@ export default function FlowerStore() {
         )}
       </AnimatePresence>
     </div>
-  );
-}
-
-function DispatchFeed() {
-  const [order, setOrder] = useState({
-    product: 'พวงหรีดโทนสีขาว',
-    location: 'วัดธาตุทอง',
-    time: '2'
-  });
-
-  useEffect(() => {
-    const orders = [
-      { product: 'พวงหรีดโทนสีขาว', location: 'วัดธาตุทอง', time: '2' },
-      { product: 'ช่อกุหลาบ Midnight', location: 'สุขุมวิท 24', time: '5' },
-      { product: 'ชุดมาลัยไหว้พระ', location: 'ศาลพระพรหม', time: '1' },
-      { product: 'พวงหรีดรักษ์โลก', location: 'วัดเทพศิรินทร์', time: '8' },
-      { product: 'ช่อดอกลิลลี่', location: 'สีลม', time: '12' },
-    ];
-
-    const interval = setInterval(() => {
-      setOrder(orders[Math.floor(Math.random() * orders.length)]);
-    }, 4000);
-
-    return () => clearInterval(interval);
-  }, []);
-
-  return (
-    <AnimatePresence mode="wait">
-      <motion.div
-        key={order.location}
-        initial={{ opacity: 0, x: -20 }}
-        animate={{ opacity: 1, x: 0 }}
-        exit={{ opacity: 0, x: 20 }}
-        className="bg-black/40 backdrop-blur-xl border border-white/10 p-5 rounded-2xl shadow-2xl flex items-center gap-4 max-w-xs"
-      >
-        <div className="w-12 h-12 rounded-xl bg-[#E11D48]/20 flex items-center justify-center shrink-0">
-          <Truck className="w-6 h-6 text-[#E11D48]" />
-        </div>
-        <div>
-          <p className="text-[11px] font-bold text-white leading-tight mb-1">
-            {order.product} <br />
-            <span className="text-white/40">จัดส่งไป</span> {order.location}
-          </p>
-          <p className="text-[9px] font-mono text-[#E11D48] uppercase tracking-widest">{order.time} mins ago</p>
-        </div>
-      </motion.div>
-    </AnimatePresence>
   );
 }
 

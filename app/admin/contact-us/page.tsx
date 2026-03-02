@@ -1,23 +1,13 @@
 'use client';
 
 import * as React from 'react';
-import { motion, AnimatePresence } from 'motion/react';
 import {
-  Mail, Phone, MessageSquare, Send, Edit, Trash2,
-  CheckCircle, Save, X, Facebook, Music2,
+  Mail, Phone, MessageSquare, Edit, Save, Facebook, Music2,
 } from 'lucide-react';
 import { useToast } from '@/components/Toast';
 import { Modal } from '@/components/Modal';
 
 // Contact info managed via /api/admin/contacts (MongoDB)
-
-interface Message {
-  id: number;
-  name: string;
-  date: string;
-  content: string;
-  isRead: boolean;
-}
 
 export interface ContactInfo {
   phone: string;
@@ -44,7 +34,6 @@ const CHANNELS = [
 ];
 
 export default function ContactUsPage() {
-  const [messages, setMessages] = React.useState<Message[]>([]);
   const [contactInfo, setContactInfo] = React.useState<ContactInfo>(DEFAULT_CONTACT);
   const [isModalOpen, setIsModalOpen] = React.useState(false);
   const [saving, setSaving]           = React.useState(false);
@@ -56,18 +45,6 @@ export default function ContactUsPage() {
       .then(data => { if (data.contact) setContactInfo(data.contact); })
       .catch(() => {});
   }, []);
-
-  const handleMarkAsRead = (id: number) => {
-    setMessages(prev => prev.map(m => m.id === id ? { ...m, isRead: true } : m));
-    showToast('ทำเครื่องหมายว่าอ่านแล้ว');
-  };
-
-  const handleDeleteMessage = (id: number) => {
-    if (confirm('คุณแน่ใจหรือไม่ว่าต้องการลบข้อความนี้?')) {
-      setMessages(prev => prev.filter(m => m.id !== id));
-      showToast('ลบข้อความสำเร็จ');
-    }
-  };
 
   const handleSaveContactInfo = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -104,112 +81,67 @@ export default function ContactUsPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-slate-900">ติดต่อเรา</h1>
-        <p className="text-slate-500 text-sm">จัดการข้อมูลการติดต่อและข้อความจากลูกค้า</p>
+        <p className="text-slate-500 text-sm">จัดการข้อมูลการติดต่อที่แสดงในหน้าแอป</p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* MESSAGES */}
-        <div className="lg:col-span-2 space-y-6">
-          <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-            <h3 className="text-lg font-bold mb-6 flex items-center gap-2">
-              <MessageSquare className="w-5 h-5 text-emerald-500" />
-              ข้อความล่าสุดจากลูกค้า
-            </h3>
-            <div className="space-y-4">
-              <AnimatePresence mode="popLayout">
-                {messages.map((msg) => (
-                  <motion.div
-                    key={msg.id}
-                    layout
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.95 }}
-                    className={`p-4 rounded-xl border transition-colors ${
-                      msg.isRead ? 'bg-white border-slate-100' : 'bg-emerald-50/30 border-emerald-100'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-2">
-                        <span className="font-bold text-sm">{msg.name}</span>
-                        {!msg.isRead && <span className="w-2 h-2 bg-emerald-500 rounded-full" />}
-                      </div>
-                      <span className="text-[10px] text-slate-400">{msg.date}</span>
-                    </div>
-                    <p className="text-sm text-slate-600 line-clamp-2">{msg.content}</p>
-                    <div className="mt-3 flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <button
-                          onClick={() => showToast('ฟีเจอร์ตอบกลับกำลังพัฒนา')}
-                          className="text-xs font-bold text-emerald-600 hover:underline flex items-center gap-1"
-                        >
-                          <Send className="w-3 h-3" /> ตอบกลับ
-                        </button>
-                        {!msg.isRead && (
-                          <button
-                            onClick={() => handleMarkAsRead(msg.id)}
-                            className="text-xs font-bold text-slate-400 hover:underline flex items-center gap-1"
-                          >
-                            <CheckCircle className="w-3 h-3" /> ทำเครื่องหมายว่าอ่านแล้ว
-                          </button>
-                        )}
-                      </div>
-                      <button
-                        onClick={() => handleDeleteMessage(msg.id)}
-                        className="p-1.5 hover:bg-red-50 text-red-400 rounded-lg transition-colors"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </motion.div>
-                ))}
-              </AnimatePresence>
-              {messages.length === 0 && (
-                <div className="text-center py-12 text-slate-400 text-sm">ไม่มีข้อความใหม่</div>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* CONTACT INFO */}
-        <div className="space-y-6">
-          <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-            <h3 className="text-lg font-bold mb-1">ข้อมูลการติดต่อหลัก</h3>
-            <p className="text-xs text-slate-400 mb-5">
+      <div className="max-w-2xl">
+        <div className="bg-white rounded-2xl shadow-lg shadow-slate-200/50 border border-slate-100 overflow-hidden">
+          <div className="bg-gradient-to-br from-slate-50 to-white px-6 py-5 border-b border-slate-100">
+            <h3 className="text-xl font-bold text-slate-800 mb-1">ข้อมูลการติดต่อหลัก</h3>
+            <p className="text-sm text-slate-500">
               ช่องทางที่กรอกแล้วจะแสดงในหน้าแอป · ช่องว่างจะซ่อนอัตโนมัติ
             </p>
+            <div className="mt-4 flex items-center gap-3">
+              <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-emerald-500 rounded-full transition-all duration-300"
+                  style={{ width: `${(filledChannels.length / CHANNELS.length) * 100}%` }}
+                />
+              </div>
+              <span className="text-xs font-semibold text-slate-500 tabular-nums">
+                {filledChannels.length}/{CHANNELS.length} ช่องทาง
+              </span>
+            </div>
+          </div>
 
-            <div className="space-y-3">
+          <div className="p-6">
+            <div className="space-y-4">
               {CHANNELS.map(ch => {
                 const value = contactInfo[ch.key];
                 const Icon = ch.icon;
                 const isFilled = !!value;
                 return (
-                  <div key={ch.key} className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
-                      {ch.label}
-                      {isFilled
-                        ? <span className="bg-emerald-100 text-emerald-600 rounded-full px-1.5 py-0.5 text-[9px] font-bold">แสดง</span>
-                        : <span className="bg-slate-100 text-slate-400 rounded-full px-1.5 py-0.5 text-[9px] font-bold">ซ่อน</span>
-                      }
-                    </label>
-                    <div className={`flex items-center gap-3 p-3 rounded-xl border ${isFilled ? 'bg-slate-50 border-slate-100' : 'bg-white border-dashed border-slate-200'}`}>
-                      <Icon className={`w-4 h-4 shrink-0 ${isFilled ? 'text-emerald-500' : 'text-slate-300'}`} />
-                      <span className={`text-sm font-medium truncate ${isFilled ? 'text-slate-700' : 'text-slate-300 italic'}`}>
+                  <div
+                    key={ch.key}
+                    className={`flex items-center gap-4 p-4 rounded-xl border transition-colors ${
+                      isFilled
+                        ? 'bg-emerald-50/50 border-emerald-100'
+                        : 'bg-slate-50/50 border-slate-100'
+                    }`}
+                  >
+                    <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${isFilled ? 'bg-emerald-500 text-white' : 'bg-slate-200 text-slate-400'}`}>
+                      <Icon className="w-5 h-5" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 mb-0.5">
+                        <span className="text-sm font-bold text-slate-700">{ch.label}</span>
+                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${isFilled ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-500'}`}>
+                          {isFilled ? 'แสดง' : 'ซ่อน'}
+                        </span>
+                      </div>
+                      <p className={`text-sm truncate ${isFilled ? 'text-slate-700' : 'text-slate-400 italic'}`}>
                         {value || 'ยังไม่ได้กรอก'}
-                      </span>
+                      </p>
                     </div>
                   </div>
                 );
               })}
             </div>
 
-            <div className="mt-4 pt-4 border-t border-slate-100">
-              <p className="text-xs text-slate-400 mb-3">
-                แสดง {filledChannels.length}/{CHANNELS.length} ช่องทาง
-              </p>
+            <div className="mt-6 pt-5 border-t border-slate-100">
               <button
                 onClick={() => setIsModalOpen(true)}
-                className="w-full py-3 bg-emerald-600 text-white rounded-xl text-sm font-bold hover:bg-emerald-700 transition-colors flex items-center justify-center gap-2"
+                className="w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-bold transition-colors flex items-center justify-center gap-2 shadow-sm hover:shadow-md"
               >
                 <Edit className="w-4 h-4" />
                 แก้ไขข้อมูลการติดต่อ

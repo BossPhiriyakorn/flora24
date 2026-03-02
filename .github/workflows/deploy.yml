@@ -7,10 +7,9 @@
 
 name: Build and Deploy to EC2
 
+# รันเฉพาะเมื่อกด Run workflow ในแท็บ Actions (ไม่รันอัตโนมัติเมื่อ push)
 on:
-  push:
-    branches: [main]
-  workflow_dispatch: # ให้กดรันเองจากแท็บ Actions ได้
+  workflow_dispatch:
 
 env:
   DEPLOY_PATH: ${{ vars.DEPLOY_PATH || '/var/www/flora' }}
