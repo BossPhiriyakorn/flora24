@@ -14,7 +14,7 @@ import { useToast } from '@/components/Toast';
 type OrderStatus  = 'pending' | 'preparing' | 'shipping' | 'delivered' | 'cancelled';
 type PaymentStatus = 'pending' | 'verified' | 'failed';
 
-interface OrderItem  { name: string; qty: number; price: number; image?: string }
+interface OrderItem  { name?: string; productName?: string; qty?: number; quantity?: number; price: number; image?: string }
 interface ShippingInfo { trackingLink?: string; courierContact?: string; note?: string }
 
 interface ApiOrder {
@@ -109,7 +109,7 @@ function OrderDetailModal({ order, onClose }: { order: ApiOrder; onClose: () => 
             <div className="space-y-2 bg-slate-50 rounded-xl p-4">
               {order.items.map((item, i) => (
                 <div key={i} className="flex justify-between text-sm">
-                  <span className="text-slate-700">{item.name ?? item.productName} <span className="text-slate-400">×{item.qty ?? item.quantity ?? 1}</span></span>
+                  <span className="text-slate-700">{item.name ?? item.productName ?? 'สินค้า'} <span className="text-slate-400">×{item.qty ?? item.quantity ?? 1}</span></span>
                   <span className="font-bold">{formatPrice(item.price * (item.qty ?? item.quantity ?? 1))} ฿</span>
                 </div>
               ))}
@@ -617,7 +617,7 @@ export default function OrdersPage() {
                                     <div className="space-y-1">
                                       {order.items.map((item, i) => (
                                         <div key={i} className="flex justify-between">
-                                          <span className="text-slate-600">{item.name ?? item.productName} ×{item.qty ?? item.quantity ?? 1}</span>
+                                          <span className="text-slate-600">{item.name ?? item.productName ?? 'สินค้า'} ×{item.qty ?? item.quantity ?? 1}</span>
                                           <span className="font-bold text-slate-800">{formatPrice(item.price * (item.qty ?? item.quantity ?? 1))} ฿</span>
                                         </div>
                                       ))}

@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Bell, Globe, Save, Database, Lock, Loader2 } from 'lucide-react';
 import { useToast } from '@/components/Toast';
@@ -129,7 +130,7 @@ function NotificationsTab() {
   );
 }
 
-export default function SettingsPage() {
+function SettingsPageContent() {
   const searchParams = useSearchParams();
   const tabFromUrl = searchParams.get('tab');
   const [activeTab, setActiveTab] = React.useState(() => (tabFromUrl === 'notifications' ? 'การแจ้งเตือน' : 'ทั่วไป'));
@@ -252,5 +253,13 @@ export default function SettingsPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function SettingsPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-slate-500">กำลังโหลด...</div>}>
+      <SettingsPageContent />
+    </Suspense>
   );
 }
