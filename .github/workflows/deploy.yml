@@ -16,7 +16,8 @@ env:
 
 jobs:
   build-and-deploy:
-    runs-on: ubuntu-latest
+    # Build on ARM64 so sharp binary is linux-arm64 (production EC2 is aarch64)
+    runs-on: ubuntu-24.04-arm
     steps:
       - name: Checkout
         uses: actions/checkout@v4

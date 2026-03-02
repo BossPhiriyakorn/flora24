@@ -50,6 +50,7 @@ client_max_body_size 5G;
 
 | จุด | สิ่งที่ต้องตรวจ |
 |-----|------------------|
+| **Runner / sharp** | Production EC2 เป็น Linux ARM64 (aarch64). Workflow ใช้ runner `ubuntu-24.04-arm` เพื่อ build บน ARM — ตัว sharp จะได้ binary linux-arm64 ถูกต้อง อัปโหลดรูปจึงทำงานบน production ได้ |
 | **Nginx body size** | ใส่ `client_max_body_size 5G;` ในบล็อก server ของโดเมนนี้ (ดูข้อ 5) |
 | **.env บนเซิร์ฟเวอร์** | อยู่ที่โฟลเดอร์เดียวกับที่รัน (เช่น `standalone/.env`) และมีค่า GOOGLE_DRIVE_* ครบ |
 | **Credentials.json** | อยู่ที่ path ใน GOOGLE_DRIVE_CREDENTIALS_PATH (บน Linux ตัวพิมพ์ต้องตรง เช่น `Credentials.json`) |
