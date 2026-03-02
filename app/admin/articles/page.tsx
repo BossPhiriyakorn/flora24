@@ -4,6 +4,7 @@ import * as React from 'react';
 import Link from 'next/link';
 import { Search, Plus, Pencil, Trash2, ChevronUp, ChevronDown, Loader2, RefreshCw } from 'lucide-react';
 import { useToast } from '@/components/Toast';
+import { getDriveImageDisplayUrl } from '@/lib/driveImageUrl';
 
 interface Article {
   _id: string;
@@ -203,7 +204,7 @@ export default function ArticlesPage() {
                       <div className="w-14 h-14 rounded-lg overflow-hidden bg-slate-100 shrink-0">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
-                          src={article.featuredImageUrl || ROW_IMAGE_PLACEHOLDER}
+                          src={article.featuredImageUrl ? getDriveImageDisplayUrl(article.featuredImageUrl, 112) : ROW_IMAGE_PLACEHOLDER}
                           alt=""
                           width={56}
                           height={56}
