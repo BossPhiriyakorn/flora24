@@ -11,12 +11,11 @@ if (useGoogleDns) {
   dns.setServers(['8.8.8.8', '8.8.4.4']);
 }
 
-const uri    = process.env.MONGODB_URI!;
+const uri    = process.env.MONGODB_URI ?? '';
 const dbName = process.env.MONGODB_DB_NAME ?? 'flora_db';
 
-if (!uri) throw new Error('MONGODB_URI is not set in environment variables');
-
-let clientPromise: Promise<MongoClient>;
+// ไม่ throw ตอนโหลดโมดูล — ให้ build ผ่านบน CI ที่ไม่มี .env; จะ throw ตอน connectDB() ถ้ายังไม่มี URI
+let clientPromise: Promise<MongoClient> | undefined;
 
 declare global {
   // eslint-disable-next-line no-var
@@ -60,6 +59,7 @@ const MONGO_OPTIONS: import('mongodb').MongoClientOptions = {
 };
 
 function createClientPromise(): Promise<MongoClient> {
+  if (!uri) throw new Error('MONGODB_URI is not set in environment variables');
   const client = new MongoClient(uri, MONGO_OPTIONS);
   const p = client.connect();
   // ถ้า connect ล้มเหลวให้ reset cache ทันที (ป้องกัน stale rejected promise)
@@ -71,20 +71,26 @@ function createClientPromise(): Promise<MongoClient> {
   return p;
 }
 
-if (process.env.NODE_ENV === 'development') {
-  if (!global._mongoClientPromise) {
-    global._mongoClientPromise = createClientPromise();
+if (uri) {
+  if (process.env.NODE_ENV === 'development') {
+    if (!global._mongoClientPromise) {
+      global._mongoClientPromise = createClientPromise();
+    }
+    clientPromise = global._mongoClientPromise;
+  } else {
+    clientPromise = createClientPromise();
   }
-  clientPromise = global._mongoClientPromise;
-} else {
-  clientPromise = createClientPromise();
 }
 
 export async function connectDB(): Promise<Db> {
-  // ถ้า promise fail ให้สร้างใหม่
-  if (process.env.NODE_ENV === 'development' && !global._mongoClientPromise) {
-    global._mongoClientPromise = createClientPromise();
-    clientPromise = global._mongoClientPromise;
+  if (!uri) throw new Error('MONGODB_URI is not set in environment variables');
+  if (!clientPromise) {
+    clientPromise = process.env.NODE_ENV === 'development' && global._mongoClientPromise
+      ? global._mongoClientPromise
+      : createClientPromise();
+    if (process.env.NODE_ENV === 'development') {
+      global._mongoClientPromise = clientPromise;
+    }
   }
   const client = await clientPromise;
   return client.db(dbName);
