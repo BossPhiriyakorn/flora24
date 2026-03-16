@@ -177,10 +177,13 @@ function ProductModal({
             />
             {(imagePreview || (mode === 'edit' && initial?.imageUrl)) && (
               <img
-                src={imagePreview || initial?.imageUrl}
+                src={imagePreview || getDriveImageDisplayUrl(initial!.imageUrl)}
                 alt="preview"
                 className="mt-2 w-20 h-20 object-cover rounded-lg border border-slate-200"
                 referrerPolicy={imagePreview ? undefined : 'no-referrer'}
+                onError={(e) => {
+                  if (!imagePreview) e.currentTarget.src = ROW_IMAGE_PLACEHOLDER;
+                }}
               />
             )}
           </div>

@@ -47,25 +47,30 @@ export async function GET(req: NextRequest) {
     let list = Array.from(byKey.entries())
       .map(([key, v]) => ({ key, ...v }))
       .filter((v) => v.totalQty > 0)
-      .sort((a, b) => b.totalQty - a.totalQty)
-      .slice(0, TOP);
+      .sort((a, b) => b.totalQty - a.totalQty);
 
-    // ดึงชื่อและรูปจาก products ถ้ามี productId (ใช้ชื่อเมื่อ order item ไม่มี name)
+    // ดึง products ที่ยังมีอยู่ในระบบ — สินค้าที่ถูกลบแล้วจะไม่โผล่ในอันดับ
     const validIds = list.map((x) => x.productId).filter((id) => id && ObjectId.isValid(id)) as string[];
+    let productById = new Map<string, { _id: ObjectId; name?: string; imageUrl?: string }>();
     if (validIds.length > 0) {
       const products = await db
         .collection('products')
         .find({ _id: { $in: validIds.map((id) => new ObjectId(id)) } })
         .project({ _id: 1, name: 1, imageUrl: 1 })
         .toArray();
-      const productById = new Map(products.map((p) => [p._id.toString(), p]));
-      list = list.map((row) => {
+      productById = new Map(products.map((p) => [p._id.toString(), p]));
+    }
+
+    // กรองเฉพาะสินค้าที่ยังมีใน collection products (สินค้าที่ลบแล้วจะหายจากรายการ)
+    list = list
+      .filter((row) => row.productId && ObjectId.isValid(row.productId) && productById.has(row.productId))
+      .slice(0, TOP)
+      .map((row) => {
         const prod = row.productId ? productById.get(row.productId) : undefined;
-        const name = (row.name && row.name !== 'ไม่ระบุชื่อ') ? row.name : (prod?.name ?? row.name ?? 'ไม่ระบุชื่อ');
+        const name = prod?.name ?? row.name ?? 'ไม่ระบุชื่อ';
         const imageUrl = row.imageUrl ?? (prod?.imageUrl);
         return { ...row, name, imageUrl };
       });
-    }
 
     const items = list.map(({ key, name, totalQty, imageUrl, productId }) => ({
       productId: productId || key,

@@ -84,7 +84,9 @@ const menuItems: MenuItem[] = [
     title: 'ข้อมูลหน้าเพจ', 
     icon: BookOpen, 
     href: `${ADMIN_BASE}/page-info`,
-    comingSoon: true,
+    subItems: [
+      { title: 'หน้าแรก (Home)', href: `${ADMIN_BASE}/page-info/home` },
+    ]
   },
   { 
     title: 'ข้อมูลสมาชิก', 

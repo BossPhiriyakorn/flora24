@@ -74,25 +74,47 @@ export default function FlowerStore() {
 
   const [isContactOpen, setIsContactOpen] = useState(false);
   const [categoryDropdownOpen, setCategoryDropdownOpen] = useState(false);
+  const [sortPriceDropdownOpen, setSortPriceDropdownOpen] = useState(false);
   const [productDetailProduct, setProductDetailProduct] = useState<any>(null);
   const [addToCartQty, setAddToCartQty] = useState(1);
   const [contactInfo, setContactInfo] = useState({
     phone: '', email: '', lineId: '', facebook: '', tiktok: '',
   });
 
+  // ฟิลเตอร์แคตตาล็อก: เรียงราคา + ช่วงราคา
+  const [sortPrice, setSortPrice] = useState<'default' | 'asc' | 'desc'>('default');
+  const [priceMin, setPriceMin] = useState('');
+  const [priceMax, setPriceMax] = useState('');
+
   // ข้อมูลจาก API
   const [PRODUCTS, setProducts]         = useState<any[]>([]);
   const [HOME_ARTICLES, setHomeArticles] = useState<any[]>([]);
   const [CATEGORIES, setCategories]     = useState<{ _id: string; name: string }[]>([]);
+  const [HERO, setHero]                 = useState<{
+    heroTagline: string;
+    heroTitleLine1: string;
+    heroTitleLine2: string;
+    heroDescLine1: string;
+    heroDescLine2: string;
+  } | null>(null);
 
-  // โหลดข้อมูลหน้าร้าน (products, categories, articles, contacts) — ใช้ทั้งตอน mount และ polling
+  // โหลดข้อมูลหน้าร้าน (products ตาม category/sort/ช่วงราคา, categories, articles, contacts, hero)
   const fetchStoreData = React.useCallback(() => {
+    fetch('/api/store-hero')
+      .then(r => r.json())
+      .then(data => { if (data.hero) setHero(data.hero); })
+      .catch(() => {});
+
     fetch('/api/categories')
       .then(r => r.json())
       .then(data => { if (data.categories) setCategories(data.categories); })
       .catch(() => {});
 
-    fetch('/api/products?limit=50')
+    const categoryParam = activeTab === 'all' ? '' : `&category=${encodeURIComponent(activeTab)}`;
+    const sortParam     = sortPrice === 'default' ? '' : `&sortPrice=${sortPrice}`;
+    const minParam      = priceMin.trim() ? `&priceMin=${encodeURIComponent(priceMin.trim())}` : '';
+    const maxParam      = priceMax.trim() ? `&priceMax=${encodeURIComponent(priceMax.trim())}` : '';
+    fetch(`/api/products?limit=50${categoryParam}${sortParam}${minParam}${maxParam}`)
       .then(r => r.json())
       .then(data => {
         if (data.products) setProducts(data.products.map((p: any) => mapProduct(p)));
@@ -115,7 +137,7 @@ export default function FlowerStore() {
       .catch(() => {
         setContactInfo({ phone: '02-123-4567', email: 'contact@flora.co.th', lineId: '@flora_delivery', facebook: '', tiktok: '' });
       });
-  }, []);
+  }, [activeTab, sortPrice, priceMin, priceMax]);
 
   // โหลด cart: ถ้า login ใช้ API (sync ข้ามอุปกรณ์); ไม่ login ใช้ localStorage
   useEffect(() => {
@@ -217,9 +239,8 @@ export default function FlowerStore() {
     return () => ctx.revert();
   }, []);
 
-  const filteredProducts = activeTab === 'all'
-    ? PRODUCTS
-    : PRODUCTS.filter(p => p.categoryName === activeTab);
+  // สินค้าถูกดึงจาก API ตาม category/sort/ช่วงราคาอยู่แล้ว
+  const filteredProducts = PRODUCTS;
 
   const scrollToCatalog = (category: string = 'all') => {
     setActiveTab(category);
@@ -509,33 +530,38 @@ export default function FlowerStore() {
           <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/60 to-[#0A0A0A]" />
         </div>
 
-        {/* pt รองรับ navbar + ระยะห่าง */}
+        {/* pt รองรับ navbar + ระยะห่าง — ข้อความจาก CMS ตั้งค่า > หน้าแรก */}
         <div className="relative z-10 hero-content text-center max-w-5xl px-6 pt-28 md:pt-24">
-          <span className="inline-block text-[#E11D48] font-mono text-xs tracking-[0.4em] uppercase mb-6">Premium 24/7 Floral Service</span>
+          <span className="inline-block text-[#E11D48] font-mono text-xs tracking-[0.4em] uppercase mb-6">
+            {HERO?.heroTagline ?? 'Premium 24/7 Floral Service'}
+          </span>
           <h1 className="text-5xl md:text-[10vw] font-black tracking-tighter leading-[0.85] mb-8">
-            BLOOMING <br />
-            <span className="italic text-transparent bg-clip-text bg-gradient-to-r from-[#E11D48] to-white">EVERY SECOND.</span>
+            {HERO?.heroTitleLine1 ?? 'BLOOMING'} <br />
+            <span className="italic text-transparent bg-clip-text bg-gradient-to-r from-[#E11D48] to-white">
+              {HERO?.heroTitleLine2 ?? 'EVERY SECOND.'}
+            </span>
           </h1>
           <p className="text-lg md:text-xl text-white/60 max-w-2xl mx-auto mb-12 font-light leading-relaxed">
-            สัมผัสความงามที่ไม่เคยหลับใหล จัดส่งดอกไม้ด่วนทั่วกรุงเทพฯ ตลอด 24 ชั่วโมง <br />
-            <span className="text-white font-medium italic">เริ่มต้น 990 บาท จัดส่งฟรีภายใน 2 ชม.</span>
+            {HERO?.heroDescLine1 ?? 'สัมผัสความงามที่ไม่เคยหลับใหล จัดส่งดอกไม้ด่วนทั่วกรุงเทพฯ ตลอด 24 ชั่วโมง'} <br />
+            <span className="text-white font-medium italic">
+              {HERO?.heroDescLine2 ?? 'เริ่มต้น 990 บาท จัดส่งฟรีภายใน 2 ชม.'}
+            </span>
           </p>
         </div>
       </section>
 
       {/* CATALOG */}
-      <section id="catalog" className="py-10 md:py-16 px-6 md:px-20 bg-[#0A0A0A]">
-        <div className="max-w-7xl mx-auto">
-          <div className={`reveal flex flex-row items-center justify-between mb-8 gap-4 ${categoryDropdownOpen ? 'relative z-[100]' : ''}`}>
-            <h2 className="text-[2.7rem] md:text-[4.05rem] font-black tracking-tighter">CATALOG</h2>
-
-            {/* CATEGORY DROPDOWN — ธีมเข้ากับแอป (พื้นเข้ม + สีแดง) */}
+      <section id="catalog" className="py-10 md:py-16 px-4 sm:px-6 md:px-20 bg-[#0A0A0A] overflow-x-hidden">
+        <div className="max-w-7xl mx-auto w-full min-w-0">
+          {/* บรรทัดที่ 1: CATALOG (ซ้าย) + dropdown ทั้งหมด ชิดขวา */}
+          <div className={`reveal flex flex-row flex-nowrap items-center justify-between gap-3 mb-4 ${categoryDropdownOpen ? 'relative z-[100]' : ''}`}>
+            <h2 className="text-2xl sm:text-3xl md:text-4xl font-black tracking-tighter shrink-0">CATALOG</h2>
             <div className="relative shrink-0">
               <button
                 type="button"
-                onClick={() => setCategoryDropdownOpen((o) => !o)}
+                onClick={() => { setCategoryDropdownOpen((o) => !o); setSortPriceDropdownOpen(false); }}
                 onBlur={() => setTimeout(() => setCategoryDropdownOpen(false), 150)}
-                className="relative flex items-center bg-[#0A0A0A] border border-white/10 text-white text-[11px] font-black tracking-widest uppercase pl-5 pr-10 py-3 rounded-full cursor-pointer hover:border-white/20 focus:outline-none focus:border-[#E11D48] transition-colors min-w-[140px]"
+                className="relative flex items-center bg-[#0A0A0A] border border-white/10 text-white text-xs sm:text-[11px] font-black tracking-widest uppercase pl-4 pr-10 py-3 rounded-full cursor-pointer hover:border-white/20 focus:outline-none focus:border-[#E11D48] transition-colors min-w-[120px] sm:min-w-[140px]"
               >
                 <span className="flex-1 truncate text-center">{activeTab === 'all' ? 'ทั้งหมด' : activeTab}</span>
                 <svg className={`absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/60 shrink-0 transition-transform ${categoryDropdownOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -549,7 +575,7 @@ export default function FlowerStore() {
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -8 }}
                     transition={{ duration: 0.15 }}
-                    className="absolute right-0 top-full mt-2 w-full min-w-[180px] py-1 bg-[#0A0A0A] border border-white/10 rounded-2xl shadow-2xl z-[100] overflow-hidden"
+                    className="absolute right-0 top-full mt-2 w-full min-w-[160px] py-1 bg-[#0A0A0A] border border-white/10 rounded-2xl shadow-2xl z-[100] overflow-hidden"
                   >
                     <button
                       type="button"
@@ -572,6 +598,66 @@ export default function FlowerStore() {
                 )}
               </AnimatePresence>
             </div>
+          </div>
+
+          {/* บรรทัดที่ 2: ฟิลเตอร์ (เรียงตาม + ช่วงราคา) ขนาดใหญ่ พอดีขอบหน้าหลัง */}
+          <div className={`reveal flex flex-nowrap items-center justify-between sm:justify-end sm:gap-4 w-full max-w-full min-w-0 gap-2 mb-8 ${sortPriceDropdownOpen ? 'relative z-[100]' : ''}`}>
+            <div className="relative shrink-0">
+              <button
+                type="button"
+                onClick={() => { setSortPriceDropdownOpen((o) => !o); setCategoryDropdownOpen(false); }}
+                onBlur={() => setTimeout(() => setSortPriceDropdownOpen(false), 150)}
+                className="flex items-center bg-[#0A0A0A] border border-white/10 text-white text-xs sm:text-[11px] font-black tracking-widest uppercase pl-4 pr-9 py-3 sm:py-3.5 rounded-full cursor-pointer hover:border-white/20 focus:outline-none focus:border-[#E11D48] transition-colors min-w-[100px] sm:min-w-[120px]"
+              >
+                <span className="truncate">
+                  {sortPrice === 'default' ? 'เรียงตาม' : sortPrice === 'asc' ? 'ราคาต่ำ→สูง' : 'ราคาสูง→ต่ำ'}
+                </span>
+                <svg className={`absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/60 shrink-0 transition-transform ${sortPriceDropdownOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+              <AnimatePresence>
+                {sortPriceDropdownOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -8 }}
+                    transition={{ duration: 0.15 }}
+                    className="absolute right-0 top-full mt-2 min-w-[140px] py-1 bg-[#0A0A0A] border border-white/10 rounded-2xl shadow-2xl z-[100] overflow-hidden"
+                  >
+                    <button type="button" onClick={() => { setSortPrice('default'); setSortPriceDropdownOpen(false); }} className={`w-full text-left px-4 py-2.5 text-[11px] font-bold tracking-widest uppercase transition-colors ${sortPrice === 'default' ? 'bg-[#E11D48]/20 text-[#E11D48]' : 'text-white hover:bg-white/5'}`}>ตามลำดับ</button>
+                    <button type="button" onClick={() => { setSortPrice('asc'); setSortPriceDropdownOpen(false); }} className={`w-full text-left px-4 py-2.5 text-[11px] font-bold tracking-widest uppercase transition-colors ${sortPrice === 'asc' ? 'bg-[#E11D48]/20 text-[#E11D48]' : 'text-white hover:bg-white/5'}`}>ราคาต่ำไปสูง</button>
+                    <button type="button" onClick={() => { setSortPrice('desc'); setSortPriceDropdownOpen(false); }} className={`w-full text-left px-4 py-2.5 text-[11px] font-bold tracking-widest uppercase transition-colors ${sortPrice === 'desc' ? 'bg-[#E11D48]/20 text-[#E11D48]' : 'text-white hover:bg-white/5'}`}>ราคาสูงไปต่ำ</button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+            <input
+              type="number"
+              min={0}
+              step={1}
+              placeholder="จาก"
+              value={priceMin}
+              onChange={(e) => setPriceMin(e.target.value)}
+              className="w-16 sm:w-20 md:w-24 min-w-0 bg-[#0A0A0A] border border-white/10 text-white text-xs sm:text-sm font-medium px-3 py-3 rounded-xl placeholder:text-white/40 focus:outline-none focus:border-[#E11D48] shrink-0"
+            />
+            <span className="text-white/40 shrink-0 text-sm">–</span>
+            <input
+              type="number"
+              min={0}
+              step={1}
+              placeholder="ถึง"
+              value={priceMax}
+              onChange={(e) => setPriceMax(e.target.value)}
+              className="w-16 sm:w-20 md:w-24 min-w-0 bg-[#0A0A0A] border border-white/10 text-white text-xs sm:text-sm font-medium px-3 py-3 rounded-xl placeholder:text-white/40 focus:outline-none focus:border-[#E11D48] shrink-0"
+            />
+            <button
+              type="button"
+              onClick={() => fetchStoreData()}
+              className="bg-[#E11D48] hover:bg-[#E11D48]/90 text-white text-xs sm:text-[11px] font-black tracking-widest uppercase px-4 py-3 rounded-xl transition-colors shrink-0 whitespace-nowrap"
+            >
+              แสดงผล
+            </button>
           </div>
 
           {/* PRODUCT GRID */}

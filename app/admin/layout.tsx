@@ -5,7 +5,6 @@ import { ToastProvider } from '@/components/Toast';
 import { ProductsProvider } from '@/context/ProductsContext';
 import { OrdersProvider } from '@/context/OrdersContext';
 import AdminHeader from '@/components/AdminHeader';
-
 export const metadata: Metadata = {
   title: 'Flora24 CMS Admin Panel',
   description: 'A comprehensive CMS backend with a custom sidebar navigation.',

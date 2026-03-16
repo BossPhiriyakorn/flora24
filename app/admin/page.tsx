@@ -6,13 +6,11 @@ import Image from 'next/image';
 import { motion } from 'motion/react';
 import {
   Users,
-  Megaphone,
   FileText,
   TrendingUp,
-  ArrowUpRight,
-  ArrowDownRight,
   ShoppingBag,
   CreditCard,
+  Package,
   XCircle,
   LogIn,
   FileText as FileTextIcon,
@@ -20,15 +18,37 @@ import {
   Bell,
   Settings,
   CheckCircle2,
+  ChevronRight,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { getDriveImageDisplayUrl } from '@/lib/driveImageUrl';
 
-const stats = [
-  { name: 'ผู้เข้าชมวันนี้', value: '1,284', change: '+12.5%', icon: Users, color: 'bg-blue-500' },
-  { name: 'ประกาศใหม่', value: '42', change: '+5.2%', icon: Megaphone, color: 'bg-emerald-500' },
-  { name: 'บทความทั้งหมด', value: '156', change: '-2.4%', icon: FileText, color: 'bg-amber-500' },
+interface DashboardStats {
+  ordersToday: number;
+  ordersPendingPayment: number;
+  totalProducts: number;
+  totalMembers: number;
+  totalArticles: number;
+}
+
+const STAT_CARDS: Array<{
+  name: string;
+  key: keyof DashboardStats;
+  icon: React.ComponentType<{ className?: string }>;
+  gradient: string;
+  iconBg: string;
+  href: string;
+}> = [
+  { name: 'คำสั่งซื้อวันนี้', key: 'ordersToday', icon: ShoppingBag, gradient: 'from-emerald-500 to-teal-600', iconBg: 'bg-white/20', href: '/admin/orders' },
+  { name: 'รอชำระเงิน', key: 'ordersPendingPayment', icon: CreditCard, gradient: 'from-amber-500 to-orange-600', iconBg: 'bg-white/20', href: '/admin/orders?paymentStatus=pending' },
+  { name: 'สินค้าทั้งหมด', key: 'totalProducts', icon: Package, gradient: 'from-violet-500 to-purple-600', iconBg: 'bg-white/20', href: '/admin/products' },
+  { name: 'สมาชิกทั้งหมด', key: 'totalMembers', icon: Users, gradient: 'from-blue-500 to-indigo-600', iconBg: 'bg-white/20', href: '/admin/members' },
+  { name: 'บทความทั้งหมด', key: 'totalArticles', icon: FileText, gradient: 'from-slate-600 to-slate-700', iconBg: 'bg-white/20', href: '/admin/articles' },
 ];
+
+function formatStatValue(n: number): string {
+  return n.toLocaleString('th-TH');
+}
 
 type NotifType = 'new_order' | 'payment_pending' | 'order_cancelled' | 'order_received' | 'admin_login' | 'new_article' | 'new_customer' | 'new_product' | 'new_product_category' | 'new_article_category' | 'settings_updated';
 
@@ -95,11 +115,24 @@ const ACTIVITY_COLOR: Record<NotifType, string> = {
 const FALLBACK_IMAGE = 'https://images.unsplash.com/photo-1596438459194-f275f413d6ff?q=80&w=200';
 
 export default function Dashboard() {
-  const [adminName, setAdminName]       = React.useState<string>('');
-  const [bestSelling, setBestSelling]    = React.useState<BestSellingItem[]>([]);
-  const [activities, setActivities]      = React.useState<ActivityItem[]>([]);
-  const [loadingBest, setLoadingBest]    = React.useState(true);
+  const [adminName, setAdminName]         = React.useState<string>('');
+  const [stats, setStats]                 = React.useState<DashboardStats | null>(null);
+  const [loadingStats, setLoadingStats]   = React.useState(true);
+  const [bestSelling, setBestSelling]     = React.useState<BestSellingItem[]>([]);
+  const [activities, setActivities]       = React.useState<ActivityItem[]>([]);
+  const [loadingBest, setLoadingBest]     = React.useState(true);
   const [loadingActivity, setLoadingActivity] = React.useState(true);
+
+  React.useEffect(() => {
+    setLoadingStats(true);
+    fetch('/api/admin/stats/dashboard')
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.ok && data.stats) setStats(data.stats);
+      })
+      .catch(() => {})
+      .finally(() => setLoadingStats(false));
+  }, []);
 
   React.useEffect(() => {
     fetch('/api/auth/admin/me')
@@ -156,35 +189,54 @@ export default function Dashboard() {
         </p>
       </header>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {stats.map((stat, index) => (
-          <motion.div
-            key={stat.name}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.1 }}
-            className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100"
-          >
-            <div className="flex items-center justify-between">
-              <div className={cn('p-3 rounded-xl text-white', stat.color)}>
-                <stat.icon className="w-6 h-6" />
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-5">
+        {loadingStats ? (
+          Array.from({ length: 5 }).map((_, i) => (
+            <div
+              key={i}
+              className="bg-white rounded-2xl border border-slate-100 overflow-hidden shadow-sm animate-pulse"
+            >
+              <div className="h-24 bg-gradient-to-br from-slate-100 to-slate-50" />
+              <div className="p-5 space-y-2">
+                <div className="h-4 w-20 bg-slate-200 rounded" />
+                <div className="h-8 w-16 bg-slate-200 rounded" />
               </div>
-              <span
-                className={cn(
-                  'flex items-center text-xs font-bold px-2 py-1 rounded-full',
-                  stat.change.startsWith('+') ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'
-                )}
+            </div>
+          ))
+        ) : (
+          STAT_CARDS.map((card, index) => {
+            const value = stats ? stats[card.key] : 0;
+            const Icon = card.icon;
+            return (
+              <motion.div
+                key={card.key}
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.06 }}
               >
-                {stat.change.startsWith('+') ? <ArrowUpRight className="w-3 h-3 mr-1" /> : <ArrowDownRight className="w-3 h-3 mr-1" />}
-                {stat.change}
-              </span>
-            </div>
-            <div className="mt-4">
-              <p className="text-sm font-medium text-slate-500">{stat.name}</p>
-              <h3 className="text-2xl font-bold text-slate-900 mt-1">{stat.value}</h3>
-            </div>
-          </motion.div>
-        ))}
+                <Link
+                  href={card.href}
+                  className={cn(
+                    'block bg-white rounded-2xl border border-slate-100 overflow-hidden shadow-sm',
+                    'hover:shadow-md hover:border-slate-200 transition-all duration-200',
+                    'focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:ring-offset-2'
+                  )}
+                >
+                  <div className={cn('min-h-[4.5rem] bg-gradient-to-br flex items-center justify-between gap-3 px-5 py-4', card.gradient)}>
+                    <div className={cn('p-2.5 rounded-xl shrink-0', card.iconBg)}>
+                      <Icon className="w-6 h-6 text-white" />
+                    </div>
+                    <p className="text-sm font-semibold text-white flex-1 min-w-0 truncate">{card.name}</p>
+                    <ChevronRight className="w-5 h-5 text-white/70 shrink-0" />
+                  </div>
+                  <div className="p-5">
+                    <p className="text-2xl font-bold text-slate-900 tabular-nums">{formatStatValue(value)}</p>
+                  </div>
+                </Link>
+              </motion.div>
+            );
+          })
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">

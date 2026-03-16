@@ -3,7 +3,8 @@ import { connectDB, ObjectId } from '@/lib/mongodb';
 
 /* ────────────────────────────────────────────────────────────
    GET /api/articles/[id]
-   บทความชิ้นเดียวพร้อมเนื้อหาเต็ม (public)
+   บทความชิ้นเดียว (public) — เฉพาะ status=published
+   แบบร่าง (draft) จะคืน 404 ไม่แสดงในแอปผู้ใช้
 ──────────────────────────────────────────────────────────── */
 export async function GET(
   _req: NextRequest,

@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Bell, Globe, Save, Database, Lock, Loader2 } from 'lucide-react';
+import { Bell, Globe, Save, Loader2 } from 'lucide-react';
 import { useToast } from '@/components/Toast';
 
 const textareaCls = 'w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 resize-y min-h-[80px]';
@@ -184,7 +184,7 @@ function SettingsPageContent() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">ตั้งค่าระบบ</h1>
-          <p className="text-slate-500 text-sm">ปรับแต่งการทำงานและตั้งค่าความปลอดภัยของระบบ CMS</p>
+          <p className="text-slate-500 text-sm">ปรับแต่งการทำงานของระบบ CMS</p>
         </div>
         <button 
           onClick={handleSave}
@@ -201,9 +201,7 @@ function SettingsPageContent() {
           <nav className="space-y-1">
             {[
               { name: 'ทั่วไป', icon: Globe },
-              { name: 'ความปลอดภัย', icon: Lock },
               { name: 'การแจ้งเตือน', icon: Bell },
-              { name: 'ฐานข้อมูล', icon: Database },
             ].map((item) => (
               <button
                 key={item.name}
@@ -242,12 +240,6 @@ function SettingsPageContent() {
 
             {activeTab === 'การแจ้งเตือน' && (
               <NotificationsTab />
-            )}
-
-            {activeTab !== 'ทั่วไป' && activeTab !== 'การแจ้งเตือน' && (
-              <div className="py-12 text-center text-slate-400 text-sm">
-                ส่วนการตั้งค่า {activeTab} กำลังอยู่ระหว่างการพัฒนา
-              </div>
             )}
           </div>
         </div>

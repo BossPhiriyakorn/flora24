@@ -4,9 +4,7 @@ import { COOKIE, verifyAdminToken } from '@/lib/auth';
 
 /* ────────────────────────────────────────────────────────────
    GET /api/auth/admin/me  — ข้อมูลแอดมินที่ล็อกอินอยู่ (จาก JWT)
-   ใช้แสดงชื่อ/บทบาทใน Sidebar และ AdminHeader
 ──────────────────────────────────────────────────────────── */
-
 export async function GET(req: NextRequest) {
   try {
     const cookieStore = await cookies();

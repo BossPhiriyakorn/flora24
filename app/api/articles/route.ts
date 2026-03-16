@@ -3,7 +3,8 @@ import { connectDB } from '@/lib/mongodb';
 
 /* ────────────────────────────────────────────────────────────
    GET /api/articles?category=&limit=
-   รายการบทความที่ status=published (public — ใช้ใน store)
+   รายการบทความที่ status=published เท่านั้น (public — หน้าแอปผู้ใช้)
+   บทความแบบร่าง (draft) จะไม่แสดงในแอป
 ──────────────────────────────────────────────────────────── */
 export async function GET(req: NextRequest) {
   try {

@@ -1,8 +1,19 @@
+import crypto from 'crypto';
 import dns from 'dns';
 import tls from 'tls';
 import { MongoClient, Db, ObjectId } from 'mongodb';
 
 export { ObjectId };
+
+// ─── TLS workaround (ต้องทำก่อนสร้าง MongoClient หรือเชื่อมต่อใด ๆ) ───
+// ป้องกัน ERR_SSL_TLSV1_ALERT_INTERNAL_ERROR บน Windows + Node 18+ / OpenSSL 3.x กับ MongoDB Atlas
+const tlsInsecure =
+  process.env.MONGODB_TLS_INSECURE === '1' ||
+  process.env.MONGODB_TLS_INSECURE === 'true' ||
+  (process.env.NODE_ENV === 'development' && process.env.MONGODB_TLS_INSECURE !== '0');
+if (tlsInsecure) {
+  process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+}
 
 // เลือกใช้ Google DNS เฉพาะเมื่อตั้งค่า (dev/บาง ISP ที่ block SRV) — ตอน Deploy ไม่ต้องตั้ง จะใช้ DNS ของเซิร์ฟเวอร์
 const useGoogleDns =
@@ -22,27 +33,16 @@ declare global {
   var _mongoClientPromise: Promise<MongoClient> | undefined;
 }
 
-// ป้องกัน ERR_SSL_TLSV1_ALERT_INTERNAL_ERROR (autoSelectFamily + TLS บน Windows/standalone)
-// โหมด development ใช้ tlsAllowInvalidCertificates เป็นค่าเริ่มต้น (ยกเลิกได้ด้วย MONGODB_TLS_INSECURE=0)
-const tlsInsecure =
-  process.env.MONGODB_TLS_INSECURE === '1' ||
-  process.env.MONGODB_TLS_INSECURE === 'true' ||
-  (process.env.NODE_ENV === 'development' && process.env.MONGODB_TLS_INSECURE !== '0');
-
-// Node.js 18+ / OpenSSL 3.x บน Windows: TLS handshake ล้มเหลวด้วย ERR_SSL_TLSV1_ALERT_INTERNAL_ERROR
-// ต้อง set ก่อนสร้าง MongoClient ใด ๆ — ใช้ใน development/tlsInsecure เท่านั้น
-if (tlsInsecure) {
-  process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
-}
-
-// Workaround สำหรับ Windows + OpenSSL 3.x: บังคับ TLS 1.2 + ลด security level
-// แก้ ERR_SSL_TLSV1_ALERT_INTERNAL_ERROR ตอน handshake กับ MongoDB Atlas
+// Workaround สำหรับ Windows + OpenSSL 3.x / Node 18+: แก้ ERR_SSL_TLSV1_ALERT_INTERNAL_ERROR กับ MongoDB Atlas
+// ใช้ SECLEVEL=0 + SSL_OP_LEGACY_SERVER_CONNECT ตามที่แนะนำสำหรับ unsafe legacy renegotiation
 const secureContext = tlsInsecure
   ? tls.createSecureContext({
       minVersion: 'TLSv1.2',
-      // SECLEVEL=0: อนุญาต cipher suite ที่ OpenSSL 3.x ปิดไว้ by default (แก้ alert 80)
       ciphers: 'DEFAULT@SECLEVEL=0',
-    })
+      ...(typeof crypto.constants.SSL_OP_LEGACY_SERVER_CONNECT !== 'undefined' && {
+        secureOptions: crypto.constants.SSL_OP_LEGACY_SERVER_CONNECT,
+      }),
+    } as tls.SecureContextOptions)
   : undefined;
 
 const MONGO_OPTIONS: import('mongodb').MongoClientOptions = {
@@ -58,9 +58,21 @@ const MONGO_OPTIONS: import('mongodb').MongoClientOptions = {
   ...(secureContext ? { secureContext } : {}),
 };
 
+/** เมื่อ tlsInsecure ให้ใส่ TLS params ใน URI ด้วย (driver บาง path อ่านจาก URI) */
+function getConnectionUri(): string {
+  if (!uri) return uri;
+  if (!tlsInsecure) return uri;
+  const params = 'tlsAllowInvalidCertificates=true&tlsAllowInvalidHostnames=true';
+  if (uri.includes('?')) {
+    return `${uri}&${params}`;
+  }
+  return `${uri}?${params}`;
+}
+
 function createClientPromise(): Promise<MongoClient> {
   if (!uri) throw new Error('MONGODB_URI is not set in environment variables');
-  const client = new MongoClient(uri, MONGO_OPTIONS);
+  const connectionUri = getConnectionUri();
+  const client = new MongoClient(connectionUri, MONGO_OPTIONS);
   const p = client.connect();
   // ถ้า connect ล้มเหลวให้ reset cache ทันที (ป้องกัน stale rejected promise)
   p.catch(() => {
@@ -151,6 +163,8 @@ export interface StaffDoc {
   role: 'admin' | 'editor';
   createdAt: Date;
   lastLogin?: Date;
+  /** บังคับให้เปลี่ยนรหัสผ่านครั้งแรก (เช่น พนักงานใหม่) — หลังล็อกอินจะเข้าได้แค่หน้า ตั้งค่า > ความปลอดภัย */
+  mustChangePassword?: boolean;
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -301,6 +315,20 @@ export interface ContactDoc {
 }
 
 /* ══════════════════════════════════════════════════════════
+   COLLECTION: store_hero
+   ข้อความส่วน Hero บนหน้าแอป (หน้าแรก) — มีแค่ 1 Document, จัดการโดย CMS ตั้งค่า > หน้าแรก
+══════════════════════════════════════════════════════════ */
+export interface StoreHeroDoc {
+  _id?: ObjectId;
+  heroTagline: string;    // แอป: ข้อความเล็กด้านบน (เช่น "Premium 24/7 Floral Service")
+  heroTitleLine1: string; // แอป: หัวข้อใหญ่บรรทัดที่ 1 (เช่น "BLOOMING")
+  heroTitleLine2: string; // แอป: หัวข้อใหญ่บรรทัดที่ 2 สีแดง (เช่น "EVERY SECOND.")
+  heroDescLine1: string;  // แอป: คำอธิบายบรรทัดที่ 1 (เช่น "สัมผัสความงาม...")
+  heroDescLine2: string;  // แอป: คำอธิบายบรรทัดที่ 2 เน้นราคา/ข้อเสนอ (เช่น "เริ่มต้น 990 บาท...")
+  updatedAt?: Date;
+}
+
+/* ══════════════════════════════════════════════════════════
    COLLECTION: saved_cards
    บัตรเครดิต/เดบิตที่ผู้ใช้ผูกไว้
    เก็บเฉพาะ metadata (ไม่เก็บเลขบัตรจริง)
@@ -366,5 +394,19 @@ export interface AdminNotificationDoc {
   refType?: 'order' | 'article' | 'staff' | 'product' | 'user';
   refId?: string;   // orderId, article _id, staff _id, product _id, user _id
   read: boolean;
+  createdAt: Date;
+}
+
+/* ══════════════════════════════════════════════════════════
+   COLLECTION: admin_login_log
+   บันทึกการเข้าใช้งานแอดมิน — ใครเข้าเมื่อไหร่ จาก IP ไหน (ใช้ใน ตั้งค่า > ความปลอดภัย)
+══════════════════════════════════════════════════════════ */
+export interface AdminLoginLogDoc {
+  _id?: ObjectId;
+  staffId: ObjectId;
+  email: string;
+  actorName: string;
+  ip: string;
+  userAgent?: string;
   createdAt: Date;
 }

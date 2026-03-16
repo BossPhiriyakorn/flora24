@@ -22,14 +22,18 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # ใช้ Node 20 LTS; อัปเป็น 22 ได้เมื่อต้องการ (ตรวจสอบว่า EC2 ติดตั้ง Node เวอร์ชันตรงกัน)
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
 
+      # ปิด engine-strict เพื่อไม่ให้ workflow ล้มเมื่อ dependency อัปเดตแล้วระบุ engine แค่ 20||22||24
       - name: Install dependencies
-        run: npm ci
+        run: |
+          npm config set engine-strict false
+          npm ci
 
       - name: Build
         env:
