@@ -51,13 +51,14 @@ export async function GET(req: NextRequest) {
 
     // ดึง products ที่ยังมีอยู่ในระบบ — สินค้าที่ถูกลบแล้วจะไม่โผล่ในอันดับ
     const validIds = list.map((x) => x.productId).filter((id) => id && ObjectId.isValid(id)) as string[];
-    let productById = new Map<string, { _id: ObjectId; name?: string; imageUrl?: string }>();
+    type ProductProjection = { _id: ObjectId; name?: string; imageUrl?: string };
+    let productById = new Map<string, ProductProjection>();
     if (validIds.length > 0) {
       const products = await db
         .collection('products')
         .find({ _id: { $in: validIds.map((id) => new ObjectId(id)) } })
         .project({ _id: 1, name: 1, imageUrl: 1 })
-        .toArray();
+        .toArray() as ProductProjection[];
       productById = new Map(products.map((p) => [p._id.toString(), p]));
     }
 
